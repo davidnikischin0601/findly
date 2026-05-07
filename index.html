@@ -1989,15 +1989,18 @@ async function startScanner() {
 
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
+    // Canvas auf max. 640px skalieren – jsQR ist bei hohen Auflösungen zu langsam
+    const MAX_DIM = 640;
     function tick() {
       if (!scannerActive) return;
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        const scale = Math.min(1, MAX_DIM / Math.max(video.videoWidth, video.videoHeight));
+        canvas.width  = Math.round(video.videoWidth  * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         try {
           const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
+          const code = jsQR(imgData.data, imgData.width, imgData.height);
           if (code && code.data) {
             handleScan(code.data);
             return;
@@ -2007,7 +2010,7 @@ async function startScanner() {
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
-    status.textContent = 'QR-CODE INS BILD HALTEN';
+    status.textContent = 'QR-CODE NÄHERN · RUHIG HALTEN · GUTE BELEUCHTUNG';
 
   } catch (err) {
     scannerActive = false;
