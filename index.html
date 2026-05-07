@@ -902,13 +902,15 @@ function loadState() {
       const parsed = JSON.parse(saved);
       state.containers = parsed.containers || [];
       state.items = parsed.items || [];
-      state.apiKey = parsed.apiKey || '';
     } catch (e) { console.error(e); }
   }
+  // API key lives only in sessionStorage – cleared when tab closes
+  state.apiKey = sessionStorage.getItem('garage_api_key') || '';
 }
 
 function saveState() {
-  localStorage.setItem('garage_state', JSON.stringify(state));
+  const { apiKey, ...rest } = state;
+  localStorage.setItem('garage_state', JSON.stringify(rest));
   updateStats();
 }
 
@@ -1631,7 +1633,7 @@ function saveApiKey() {
   const val = document.getElementById('apiKey').value.trim();
   if (val) {
     state.apiKey = val;
-    saveState();
+    sessionStorage.setItem('garage_api_key', val);
     document.getElementById('apiKey').value = '';
     toast('API-Key gespeichert');
   } else {
@@ -1668,7 +1670,8 @@ async function exportData() {
     };
   });
 
-  const blob = new Blob([JSON.stringify({ ...state, photos }, null, 2)], { type: 'application/json' });
+  const { apiKey, ...stateWithoutKey } = state;
+  const blob = new Blob([JSON.stringify({ ...stateWithoutKey, photos }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -1687,7 +1690,7 @@ async function importData(e) {
     const data = JSON.parse(text);
     state.containers = data.containers || [];
     state.items = data.items || [];
-    state.apiKey = data.apiKey || '';
+    // apiKey wird nie aus Backups geladen – bleibt in sessionStorage
     if (data.photos) {
       for (const [k, v] of Object.entries(data.photos)) await savePhoto(k, v);
     }
@@ -1727,6 +1730,17 @@ function closeAllModals() {
 
 (async function init() {
   await openDB();
+  // Einmalige Migration: alten Key aus localStorage entfernen falls vorhanden
+  const legacy = localStorage.getItem('garage_state');
+  if (legacy) {
+    try {
+      const parsed = JSON.parse(legacy);
+      if (parsed.apiKey) {
+        delete parsed.apiKey;
+        localStorage.setItem('garage_state', JSON.stringify(parsed));
+      }
+    } catch (_) {}
+  }
   loadState();
   updateApiKeyStatus();
   updateStats();
