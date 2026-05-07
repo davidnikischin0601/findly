@@ -2411,6 +2411,30 @@ function closeModal(id) { document.getElementById(id).classList.remove('show'); 
 function closeAllModals() { document.querySelectorAll('.modal-bg').forEach(m => m.classList.remove('show')); }
 
 // ============================================================
+//   FOTO-MIGRATION: lokale IndexedDB → RTDB (einmalig im Hintergrund)
+// ============================================================
+
+function migrateLocalPhotosToRTDB() {
+  const keys = [];
+  state.containers.forEach(c => { if (c.photoKey) keys.push(c.photoKey); });
+  state.items.forEach(i => { if (i.photoKey) keys.push(i.photoKey); });
+  if (keys.length === 0) return;
+
+  keys.forEach(key => {
+    try {
+      const tx = DB.transaction('photos', 'readonly');
+      const req = tx.objectStore('photos').get(key);
+      req.onsuccess = () => {
+        if (req.result) {
+          // Foto ist lokal vorhanden → in RTDB hochladen (überschreibt nichts Schlimmeres)
+          fbPhotosRef.child(key).set(req.result).catch(() => {});
+        }
+      };
+    } catch (e) { /* ignore */ }
+  });
+}
+
+// ============================================================
 //   INIT
 // ============================================================
 
@@ -2438,6 +2462,9 @@ function closeAllModals() { document.querySelectorAll('.modal-bg').forEach(m => 
     updateStats();
     renderOverview();
   }
+
+  // Stille Migration: lokale Fotos in RTDB hochladen (einmalig, im Hintergrund)
+  migrateLocalPhotosToRTDB();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
