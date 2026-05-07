@@ -10,6 +10,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
@@ -837,7 +839,22 @@ mark {
 
 <script>
 // ============================================================
-//   STATE & PERSISTENCE (IndexedDB für Fotos, localStorage für Rest)
+//   FIREBASE
+// ============================================================
+
+firebase.initializeApp({
+  apiKey: "AIzaSyCULtyZMNInebcp5RQs6eI0ynvnlBItGbY",
+  authDomain: "homeorg-269df.firebaseapp.com",
+  databaseURL: "https://homeorg-269df-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "homeorg-269df",
+  storageBucket: "homeorg-269df.firebasestorage.app",
+  messagingSenderId: "648741985758",
+  appId: "1:648741985758:web:7281cf217864e6d2dd514f"
+});
+const fbRef = firebase.database().ref('garage');
+
+// ============================================================
+//   STATE & PERSISTENCE (IndexedDB für Fotos, Firebase + localStorage für Rest)
 // ============================================================
 
 let DB = null;
@@ -895,7 +912,7 @@ function deletePhoto(key) {
   });
 }
 
-function loadState() {
+function loadLocalState() {
   const saved = localStorage.getItem('garage_state');
   if (saved) {
     try {
@@ -904,13 +921,29 @@ function loadState() {
       state.items = parsed.items || [];
     } catch (e) { console.error(e); }
   }
-  // API key lives only in sessionStorage – cleared when tab closes
   state.apiKey = sessionStorage.getItem('garage_api_key') || '';
 }
 
+async function syncFromFirebase() {
+  try {
+    const snapshot = await fbRef.once('value');
+    const data = snapshot.val();
+    if (data && (data.containers || data.items)) {
+      state.containers = data.containers || [];
+      state.items = data.items || [];
+      localStorage.setItem('garage_state', JSON.stringify({ containers: state.containers, items: state.items }));
+      return true;
+    }
+  } catch (e) {
+    console.warn('Firebase nicht erreichbar, nutze lokalen Cache:', e);
+  }
+  return false;
+}
+
 function saveState() {
-  const { apiKey, ...rest } = state;
-  localStorage.setItem('garage_state', JSON.stringify(rest));
+  const data = { containers: state.containers, items: state.items };
+  localStorage.setItem('garage_state', JSON.stringify(data));
+  fbRef.set(data).catch(e => console.warn('Firebase-Sync fehlgeschlagen:', e));
   updateStats();
 }
 
@@ -1730,7 +1763,8 @@ function closeAllModals() {
 
 (async function init() {
   await openDB();
-  // Einmalige Migration: alten Key aus localStorage entfernen falls vorhanden
+
+  // Migration: alten API-Key aus localStorage entfernen
   const legacy = localStorage.getItem('garage_state');
   if (legacy) {
     try {
@@ -1741,12 +1775,21 @@ function closeAllModals() {
       }
     } catch (_) {}
   }
-  loadState();
+
+  // Phase 1: lokalen Cache sofort anzeigen (schnell)
+  loadLocalState();
   updateApiKeyStatus();
   updateStats();
   renderOverview();
 
-  // Service Worker
+  // Phase 2: Firebase-Sync (kann einen Moment dauern)
+  const synced = await syncFromFirebase();
+  if (synced) {
+    updateStats();
+    renderOverview();
+    toast('☁ Daten synchronisiert');
+  }
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
