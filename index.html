@@ -1064,6 +1064,15 @@ nav.tabs button .icon { font-size: 18px; }
         <video id="scannerVideo" autoplay playsinline muted></video>
         <canvas id="scannerCanvas"></canvas>
         <div class="scanner-overlay"></div>
+        <div id="scannerConfirm" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.88); z-index:10; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:24px; text-align:center;">
+          <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="none" stroke="#FFD60A" stroke-width="2"/><polyline points="12,21 18,27 28,14" fill="none" stroke="#FFD60A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div id="scannerConfirmCode" style="font-family:'JetBrains Mono',monospace; color:var(--primary); font-size:15px; letter-spacing:0.12em;"></div>
+          <div id="scannerConfirmName" style="color:var(--ink); font-size:13px; max-width:200px; line-height:1.4;"></div>
+          <div style="display:flex; gap:10px; margin-top:4px;">
+            <button class="btn secondary" onclick="scannerResume()" style="font-size:12px;">Erneut scannen</button>
+            <button class="btn" id="scannerConfirmOk" onclick="scannerConfirmGo()" style="font-size:12px; min-width:90px;"></button>
+          </div>
+        </div>
       </div>
       <div class="scanner-status" id="scannerStatus">QR-CODE INS BILD HALTEN</div>
       <div style="margin-top:16px;">
@@ -2050,23 +2059,82 @@ function stopScanner() {
   }
 }
 
+let _scanConfirmTimer = null;
+let _scanConfirmAction = null;
+
 function handleScan(data) {
-  stopScanner();
+  scannerActive = false; // pause detection loop, keep camera stream alive
+  clearInterval(_scanConfirmTimer);
+
   let code = data;
   if (data.startsWith('GARAGE://')) code = data.substring(9);
-
   const c = state.containers.find(x => x.code === code);
-  if (c) {
-    toast(`Behälter ${code} gefunden`);
-    setTimeout(() => { switchTab('overview'); openContainerDetail(c.id); }, 400);
-  } else {
-    confirmDialog(`Behälter "${code}" nicht gefunden. Jetzt anlegen?`, 'Jetzt anlegen').then(ok => {
+
+  document.getElementById('scannerConfirmCode').textContent = code;
+  document.getElementById('scannerConfirmName').textContent = c ? c.name : `Behälter nicht gefunden`;
+  const confirmEl = document.getElementById('scannerConfirm');
+  confirmEl.style.display = 'flex';
+
+  let countdown = 2;
+  const label = () => (c ? `Öffnen (${countdown})` : `Anlegen (${countdown})`);
+  document.getElementById('scannerConfirmOk').textContent = label();
+
+  _scanConfirmAction = () => {
+    confirmEl.style.display = 'none';
+    stopScanner();
+    if (c) {
       switchTab('overview');
-      if (ok) setTimeout(() => {
-        openContainerModal();
-        document.getElementById('containerIdInput').value = code;
-      }, 200);
-    });
+      openContainerDetail(c.id);
+    } else {
+      confirmDialog(`Behälter "${code}" nicht gefunden. Jetzt anlegen?`, 'Jetzt anlegen').then(ok => {
+        switchTab('overview');
+        if (ok) setTimeout(() => {
+          openContainerModal();
+          document.getElementById('containerIdInput').value = code;
+        }, 200);
+      });
+    }
+  };
+
+  _scanConfirmTimer = setInterval(() => {
+    countdown--;
+    if (countdown <= 0) { clearInterval(_scanConfirmTimer); _scanConfirmAction(); }
+    else document.getElementById('scannerConfirmOk').textContent = label();
+  }, 1000);
+}
+
+function scannerConfirmGo() {
+  clearInterval(_scanConfirmTimer);
+  if (_scanConfirmAction) _scanConfirmAction();
+}
+
+function scannerResume() {
+  clearInterval(_scanConfirmTimer);
+  document.getElementById('scannerConfirm').style.display = 'none';
+  scannerActive = true;
+  const video = document.getElementById('scannerVideo');
+  const canvas = document.getElementById('scannerCanvas');
+  if ('BarcodeDetector' in window) {
+    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+    (async function detectNative() {
+      if (!scannerActive) return;
+      try { const codes = await detector.detect(video); if (codes.length > 0) { handleScan(codes[0].rawValue); return; } } catch (e) {}
+      requestAnimationFrame(detectNative);
+    })();
+  } else {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const MAX_DIM = 800;
+    (function tick() {
+      if (!scannerActive) return;
+      if (video.videoWidth > 0) {
+        const scale = Math.min(1, MAX_DIM / Math.max(video.videoWidth, video.videoHeight));
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        try { const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height); const code = jsQR(imgData.data, imgData.width, imgData.height); if (code && code.data) { handleScan(code.data); return; } } catch (e) {}
+      }
+      requestAnimationFrame(tick);
+    })();
   }
 }
 
