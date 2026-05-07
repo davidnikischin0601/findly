@@ -1067,7 +1067,7 @@ nav.tabs button .icon { font-size: 18px; }
       </div>
       <div class="scanner-status" id="scannerStatus">QR-CODE INS BILD HALTEN</div>
       <div style="margin-top:16px;">
-        <button class="btn secondary full" onclick="stopScanner(); switchTab('settings')">QR-Codes drucken</button>
+        <button class="btn secondary full" onclick="stopScanner(); printQRCodes()">QR-Codes drucken</button>
       </div>
     </div>
 
@@ -1971,10 +1971,19 @@ async function startScanner() {
   const canvas = document.getElementById('scannerCanvas');
   const status = document.getElementById('scannerStatus');
 
+  status.textContent = 'KAMERA WIRD GESTARTET…';
+
   try {
-    scannerStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }
-    });
+    // Rückkamera bevorzugen, aber nicht erzwingen (ideal statt exact)
+    try {
+      scannerStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
+      });
+    } catch {
+      // Fallback: beliebige Kamera
+      scannerStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    }
+
     video.srcObject = scannerStream;
     await video.play();
 
@@ -1986,20 +1995,31 @@ async function startScanner() {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imgData.data, imgData.width, imgData.height);
-        if (code && code.data) {
-          handleScan(code.data);
-          return;
-        }
+        try {
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
+          if (code && code.data) {
+            handleScan(code.data);
+            return;
+          }
+        } catch (e) { /* jsQR-Fehler ignorieren, weiter scannen */ }
       }
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
     status.textContent = 'QR-CODE INS BILD HALTEN';
+
   } catch (err) {
-    status.textContent = 'KAMERA NICHT VERFÜGBAR';
-    console.error(err);
+    scannerActive = false;
+    let msg = 'KAMERA NICHT VERFÜGBAR';
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
+      msg = 'ZUGRIFF VERWEIGERT – In den Browser-Einstellungen Kamera erlauben';
+    else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError')
+      msg = 'KEINE KAMERA GEFUNDEN';
+    else if (err.name === 'NotSupportedError')
+      msg = 'HTTPS ERFORDERLICH – Bitte GitHub-Link nutzen';
+    status.innerHTML = msg + `<br><button class="btn secondary" onclick="startScanner()" style="margin-top:12px;font-size:10px;">Erneut versuchen</button>`;
+    console.error('Scanner-Fehler:', err.name, err.message);
   }
 }
 
