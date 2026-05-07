@@ -930,6 +930,12 @@ nav.tabs button .icon { font-size: 18px; }
 .btn-row { display: flex; gap: 8px; }
 .btn-row .btn { flex: 1; }
 
+/* ── MOBILE: topbar vereinfachen ── */
+@media (max-width: 767px) {
+  .topbar-brand { width: auto; border-right: none; flex: 1; }
+  .topbar-nav { display: none; }
+}
+
 /* ── DESKTOP BREAKPOINT ── */
 @media (min-width: 768px) {
   body { padding-bottom: 0; }
@@ -1146,7 +1152,7 @@ nav.tabs button .icon { font-size: 18px; }
         <button class="btn secondary" onclick="document.getElementById('importFile').click()">Backup laden</button>
         <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
       </div>
-      <button class="btn ghost full" onclick="resetAll()">Alle Daten löschen</button>
+      <button class="btn danger full" onclick="resetAll()">Alle Daten löschen</button>
     </div>
 
   </main>
@@ -1191,6 +1197,13 @@ nav.tabs button .icon { font-size: 18px; }
     <label class="photo-input" id="containerPhotoInput">
       <input type="file" accept="image/*" capture="environment" id="containerPhotoFile">
       <div class="placeholder"><div class="icon">⌂</div><div>FOTO VOM SOLLZUSTAND</div></div>
+    </label>
+    <div class="field" style="margin-top:14px;">
+      <label>Standortfoto (optional)</label>
+    </div>
+    <label class="photo-input" id="containerLocationPhotoInput" style="aspect-ratio:16/9;">
+      <input type="file" accept="image/*" capture="environment" id="containerLocationPhotoFile">
+      <div class="placeholder"><div class="icon">◈</div><div>FOTO VOM STANDORT / REGAL</div></div>
     </label>
     <div class="field" style="margin-top:14px;">
       <label>ID (QR-Code)</label>
@@ -1731,17 +1744,31 @@ function openContainerModal(id = null) {
   photoInput.style.backgroundImage = '';
   photoInput.classList.remove('has-photo');
   photoInput.querySelector('.placeholder').style.display = 'block';
-
   delete photoInput.dataset.photoData;
+
+  const locPhotoInput = document.getElementById('containerLocationPhotoInput');
+  locPhotoInput.style.backgroundImage = '';
+  locPhotoInput.classList.remove('has-photo');
+  locPhotoInput.querySelector('.placeholder').style.display = 'block';
+  delete locPhotoInput.dataset.photoData;
+
   if (c) {
     getPhotoUrl(c).then(url => {
       if (url) {
         photoInput.style.backgroundImage = `url(${url})`;
         photoInput.classList.add('has-photo');
         photoInput.querySelector('.placeholder').style.display = 'none';
-        // Kein dataset.photoData setzen – nur neue Fotos vom Nutzer werden hochgeladen
       }
     });
+    if (c.locationPhotoKey) {
+      loadPhoto(c.locationPhotoKey).then(url => {
+        if (url) {
+          locPhotoInput.style.backgroundImage = `url(${url})`;
+          locPhotoInput.classList.add('has-photo');
+          locPhotoInput.querySelector('.placeholder').style.display = 'none';
+        }
+      });
+    }
   }
 
   document.getElementById('modalContainer').classList.add('show');
@@ -1766,11 +1793,22 @@ document.getElementById('containerPhotoFile').addEventListener('change', async (
   input.dataset.photoData = data;
 });
 
+document.getElementById('containerLocationPhotoFile').addEventListener('change', async (e) => {
+  if (!e.target.files[0]) return;
+  const data = await compressImage(e.target.files[0]);
+  const input = document.getElementById('containerLocationPhotoInput');
+  input.style.backgroundImage = `url(${data})`;
+  input.classList.add('has-photo');
+  input.querySelector('.placeholder').style.display = 'none';
+  input.dataset.photoData = data;
+});
+
 async function saveContainer() {
   const code = document.getElementById('containerIdInput').value.trim().toUpperCase();
   const name = document.getElementById('containerNameInput').value.trim();
   const location = document.getElementById('containerLocationInput').value.trim();
   const photoData = document.getElementById('containerPhotoInput').dataset.photoData;
+  const locPhotoData = document.getElementById('containerLocationPhotoInput').dataset.photoData;
 
   if (!code || !name) { toast('ID und Name sind nötig', true); return; }
 
@@ -1785,11 +1823,18 @@ async function saveContainer() {
       await savePhoto(photoKey, photoData);
       c.photoKey = photoKey;
     }
+    if (locPhotoData) {
+      const locKey = c.locationPhotoKey || `cl_${c.id}`;
+      await savePhoto(locKey, locPhotoData);
+      c.locationPhotoKey = locKey;
+    }
   } else {
     const id = uid();
     const photoKey = photoData ? `c_${id}` : null;
+    const locKey = locPhotoData ? `cl_${id}` : null;
     if (photoData) await savePhoto(photoKey, photoData);
-    state.containers.push({ id, code, name, location, photoKey, created: Date.now(), lastAccessed: Date.now() });
+    if (locPhotoData) await savePhoto(locKey, locPhotoData);
+    state.containers.push({ id, code, name, location, photoKey, locationPhotoKey: locKey, created: Date.now(), lastAccessed: Date.now() });
   }
 
   saveState();
@@ -1803,6 +1848,7 @@ async function deleteContainer() {
   if (!await confirmDialog('Behälter und alle darin enthaltenen Items wirklich löschen?')) return;
   const c = state.containers.find(x => x.id === editingContainer);
   if (c?.photoKey) await deletePhoto(c.photoKey);
+  if (c?.locationPhotoKey) await deletePhoto(c.locationPhotoKey);
   const itemsToDelete = state.items.filter(i => i.containerId === editingContainer);
   for (const it of itemsToDelete) if (it.photoKey) await deletePhoto(it.photoKey);
   state.items = state.items.filter(i => i.containerId !== editingContainer);
@@ -2142,7 +2188,46 @@ async function renderSearch() {
   out.innerHTML = '';
 
   if (q.length < 2) {
-    out.innerHTML = `<div class="empty"><div class="icon">⌕</div><div class="text">MINDESTENS 2 ZEICHEN</div></div>`;
+    const recent = state.items
+      .filter(i => i.status === 'active')
+      .sort((a, b) => (b.lastUsed || b.created) - (a.lastUsed || a.created))
+      .slice(0, 10);
+    if (recent.length === 0) {
+      out.innerHTML = `<div class="empty"><div class="icon">⌕</div><div class="text">NOCH KEINE ITEMS</div></div>`;
+      return;
+    }
+    const label = document.createElement('div');
+    label.className = 'section-label';
+    label.style.marginBottom = '10px';
+    label.textContent = 'Zuletzt verwendet';
+    out.appendChild(label);
+    for (const it of recent) {
+      const c = state.containers.find(x => x.id === it.containerId);
+      if (!c) continue;
+      const photo = await getPhotoUrl(it);
+      const div = document.createElement('div');
+      div.className = 'search-result';
+      div.onclick = async () => {
+        closeAllModals(); await openContainerDetail(c.id);
+        setTimeout(() => {
+          document.querySelectorAll('#detailItems .item-row').forEach(row => {
+            if (row.dataset.itemId === it.id) {
+              row.style.outline = '2px solid var(--primary)';
+              row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              setTimeout(() => { row.style.outline = ''; }, 2000);
+            }
+          });
+        }, 350);
+      };
+      div.innerHTML = `
+        <div class="thumb" ${photo ? `style="background-image:url(${photo})"` : ''}></div>
+        <div class="info">
+          <div class="item-name">${escapeHtml(it.name)}</div>
+          <div class="container-name">${escapeHtml(c.name)}</div>
+          <div class="location">◈ ${c.code}${c.location ? ' · ' + escapeHtml(c.location) : ''}</div>
+        </div>`;
+      out.appendChild(div);
+    }
     return;
   }
 
@@ -2206,9 +2291,13 @@ async function renderDust() {
     .filter(i => i.age >= 180)
     .sort((a, b) => b.age - a.age);
 
-  document.getElementById('dustCount').textContent = candidates.length > 0 ? candidates.length : '';
+  const sortedOut = state.items
+    .filter(i => i.status === 'sell' || i.status === 'trash')
+    .sort((a, b) => (b.lastUsed || b.created) - (a.lastUsed || a.created));
 
-  if (candidates.length === 0) {
+  document.getElementById('dustCount').textContent = (candidates.length + sortedOut.length) > 0 ? (candidates.length + sortedOut.length) : '';
+
+  if (candidates.length === 0 && sortedOut.length === 0) {
     list.innerHTML = `<div class="empty"><div class="icon">✓</div><div class="text">NICHTS ZUM AUSMISTEN</div><div class="sub">Items, die du seit über 6 Monaten nicht angefasst hast, erscheinen hier.</div></div>`;
     return;
   }
@@ -2217,7 +2306,6 @@ async function renderDust() {
     const c = state.containers.find(x => x.id === it.containerId);
     const cls = it.age > 365 ? 'danger' : 'warn';
     const photo = await getPhotoUrl(it);
-
     const card = document.createElement('div');
     card.className = `dust-card ${cls}`;
     card.innerHTML = `
@@ -2233,9 +2321,40 @@ async function renderDust() {
         <button class="keep" onclick="dustAction('${it.id}','keep')">Behalten</button>
         <button class="sell" onclick="dustAction('${it.id}','sell')">Verkaufen</button>
         <button class="trash" onclick="dustAction('${it.id}','trash')">Wegwerfen</button>
-      </div>
-    `;
+      </div>`;
     list.appendChild(card);
+  }
+
+  if (sortedOut.length > 0) {
+    const sep = document.createElement('div');
+    sep.className = 'section-label';
+    sep.style.cssText = 'margin: 20px 0 10px;';
+    sep.textContent = 'Aussortiert';
+    list.appendChild(sep);
+
+    for (const it of sortedOut) {
+      const c = state.containers.find(x => x.id === it.containerId);
+      const photo = await getPhotoUrl(it);
+      const statusLabel = it.status === 'sell' ? 'ZU VERKAUFEN' : 'PAPIERKORB';
+      const statusColor = it.status === 'sell' ? 'var(--amber)' : 'var(--danger)';
+      const card = document.createElement('div');
+      card.className = 'dust-card';
+      card.style.opacity = '0.8';
+      card.innerHTML = `
+        <div style="display:flex;gap:12px;">
+          <div style="width:52px;height:52px;background:var(--surface-3);border-radius:var(--radius-sm);flex-shrink:0;${photo?`background-image:url(${photo});background-size:cover;background-position:center;`:''}"></div>
+          <div style="flex:1;">
+            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;color:${statusColor};font-weight:700;margin-bottom:3px;">${statusLabel}</div>
+            <div class="item">${escapeHtml(it.name)}</div>
+            <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;margin-top:2px;">${c?.code} · ${escapeHtml(c?.name||'')}</div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="keep" onclick="dustAction('${it.id}','restore')">Wiederherstellen</button>
+          <button class="trash" onclick="dustAction('${it.id}','delete_permanent')">Endgültig löschen</button>
+        </div>`;
+      list.appendChild(card);
+    }
   }
 }
 
@@ -2265,10 +2384,24 @@ async function dustAction(itemId, action) {
     it.status = 'trash';
     saveState();
     await renderDust();
-    toastWithUndo('In den Papierkorb', () => {
+    toastWithUndo('Weggeworfen – erscheint in Aussortiert', () => {
       const item = state.items.find(x => x.id === itemId);
       if (item) { item.status = prevStatus; saveState(); renderDust(); }
     });
+  } else if (action === 'restore') {
+    it.status = 'active';
+    it.lastUsed = Date.now();
+    saveState();
+    await renderDust();
+    toast('Wiederhergestellt');
+  } else if (action === 'delete_permanent') {
+    if (!await confirmDialog(`"${it.name}" endgültig löschen?`)) return;
+    if (it.photoKey) await deletePhoto(it.photoKey);
+    state.items = state.items.filter(x => x.id !== itemId);
+    saveState();
+    await renderDust();
+    updateStats();
+    toast('Endgültig gelöscht');
   }
 }
 
@@ -2567,6 +2700,8 @@ function migrateLocalPhotosToRTDB() {
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').then(reg => {
+      // Falls ein neuer SW bereits wartet (z.B. aus vorheriger Session) → sofort aktivieren
+      if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
       reg.update(); // Bei jedem Start auf neue Version prüfen
       reg.addEventListener('updatefound', () => {
         const sw = reg.installing;
