@@ -295,7 +295,7 @@ button.icon-btn {
   background: var(--surface-2);
   border: 1px solid var(--border-2);
   color: var(--ink-2);
-  width: 32px; height: 32px;
+  width: 44px; height: 44px;
   border-radius: var(--radius);
   cursor: pointer;
   display: grid;
@@ -973,7 +973,7 @@ nav.tabs button .icon { font-size: 18px; }
   <!-- LEFT RAIL -->
   <aside class="rail">
     <div class="rail-section">
-      <div class="rail-label">Räume</div>
+      <div class="rail-label">Lager</div>
       <div class="rail-item active">
         <span class="rail-dot"></span>
         <span class="rail-name">Garage</span>
@@ -986,14 +986,14 @@ nav.tabs button .icon { font-size: 18px; }
     <div class="rail-section">
       <div class="rail-label">Etiketten</div>
       <div class="tag-cloud" id="tagCloud">
-        <span class="tag-chip">#werkzeug</span>
-        <span class="tag-chip">#kfz</span>
-        <span class="tag-chip">#garten</span>
-        <span class="tag-chip">#sport</span>
-        <span class="tag-chip">#elektro</span>
-        <span class="tag-chip">#saison</span>
-        <span class="tag-chip">#material</span>
-        <span class="tag-chip">#sonstiges</span>
+        <span class="tag-chip" onclick="filterByTag('werkzeug')">#werkzeug</span>
+        <span class="tag-chip" onclick="filterByTag('kfz')">#kfz</span>
+        <span class="tag-chip" onclick="filterByTag('garten')">#garten</span>
+        <span class="tag-chip" onclick="filterByTag('sport')">#sport</span>
+        <span class="tag-chip" onclick="filterByTag('elektro')">#elektro</span>
+        <span class="tag-chip" onclick="filterByTag('saison')">#saison</span>
+        <span class="tag-chip" onclick="filterByTag('material')">#material</span>
+        <span class="tag-chip" onclick="filterByTag('sonstiges')">#sonstiges</span>
       </div>
     </div>
   </aside>
@@ -1012,7 +1012,7 @@ nav.tabs button .icon { font-size: 18px; }
           <span class="view-pill warn" id="dustPill" style="display:none;"></span>
           <div class="view-actions">
             <button class="btn secondary" onclick="printQRCodes()" style="padding:5px 12px;font-size:10px;">Etikett drucken</button>
-            <button class="btn" onclick="openContainerModal()" style="padding:5px 14px;font-size:10px;">+ Objekt erfassen</button>
+            <button class="btn" onclick="openContainerModal()" style="padding:5px 14px;font-size:10px;">+ Neuer Behälter</button>
           </div>
         </div>
       </div>
@@ -1140,7 +1140,7 @@ nav.tabs button .icon { font-size: 18px; }
 
 <!-- STATUS BAR (desktop) -->
 <div class="status-bar">
-  <span><span class="status-dot"></span>Synchronisiert</span>
+  <span><span class="status-dot" id="syncDot"></span><span id="syncStatusText">Verbinde…</span></span>
   <span id="statusBarStats">0 Objekte · 1 Raum</span>
   <span class="spacer"></span>
   <span>Findly v1.0</span>
@@ -1239,7 +1239,7 @@ nav.tabs button .icon { font-size: 18px; }
     </div>
     <label class="photo-input" id="itemPhotoInput">
       <input type="file" accept="image/*" capture="environment" id="itemPhotoFile">
-      <div class="placeholder"><div class="icon">▲</div><div>FOTO MACHEN</div></div>
+      <div class="placeholder"><div class="icon">▲</div><div>FOTO MACHEN</div><div style="font-size:9px;color:var(--muted-2);margin-top:4px;">KI erkennt Objekt automatisch</div></div>
     </label>
     <button class="btn secondary full" id="aiDetectBtn" onclick="detectItem()" style="margin-top:10px;display:none;">
       <span>KI: Was ist das?</span>
@@ -1268,6 +1268,20 @@ nav.tabs button .icon { font-size: 18px; }
     <div class="btn-row">
       <button class="btn" onclick="saveItem()">Speichern</button>
       <button class="btn ghost" id="deleteItemBtn" onclick="deleteItem()" style="display:none;">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONFIRM DIALOG ── -->
+<div class="modal-bg" id="confirmDialogModal">
+  <div class="modal" style="max-height:auto;">
+    <div class="modal-header">
+      <span class="modal-title" id="confirmDialogTitle">Bestätigung</span>
+    </div>
+    <p id="confirmDialogMessage" style="font-size:14px;color:var(--ink-2);line-height:1.55;margin-bottom:20px;"></p>
+    <div class="btn-row">
+      <button class="btn danger" id="confirmDialogOk">Ja, löschen</button>
+      <button class="btn ghost" id="confirmDialogCancel">Abbrechen</button>
     </div>
   </div>
 </div>
@@ -1366,22 +1380,27 @@ async function syncFromFirebase() {
   try {
     const snapshot = await fbRef.once('value');
     const data = snapshot.val();
+    setSyncStatus(true);
     if (data && (data.containers || data.items)) {
       state.containers = data.containers || [];
       state.items = data.items || [];
       localStorage.setItem('garage_state', JSON.stringify({ containers: state.containers, items: state.items }));
       return true;
     }
+    return false;
   } catch (e) {
     console.warn('Firebase nicht erreichbar, nutze lokalen Cache:', e);
+    setSyncStatus(false);
+    return false;
   }
-  return false;
 }
 
 function saveState() {
   const data = { containers: state.containers, items: state.items };
   localStorage.setItem('garage_state', JSON.stringify(data));
-  fbRef.set(data).catch(e => console.warn('Firebase-Sync fehlgeschlagen:', e));
+  fbRef.set(data)
+    .then(() => setSyncStatus(true))
+    .catch(e => { console.warn('Firebase-Sync fehlgeschlagen:', e); setSyncStatus(false); });
   updateStats();
 }
 
@@ -1396,7 +1415,51 @@ function toast(msg, isError = false) {
   t.textContent = msg;
   t.classList.toggle('error', isError);
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2400);
+  setTimeout(() => t.classList.remove('show'), isError ? 4500 : 2400);
+}
+
+function toastWithUndo(msg, undoFn) {
+  const t = document.getElementById('toast');
+  t.innerHTML = escapeHtml(msg) + ' <span id="toastUndoBtn" style="text-decoration:underline;cursor:pointer;margin-left:8px;font-weight:700;">RÜCKGÄNGIG</span>';
+  t.classList.remove('error');
+  t.classList.add('show');
+  let undone = false;
+  const undoBtn = document.getElementById('toastUndoBtn');
+  if (undoBtn) undoBtn.onclick = () => { undone = true; t.classList.remove('show'); undoFn(); };
+  setTimeout(() => { if (!undone) t.classList.remove('show'); }, 4500);
+}
+
+function confirmDialog(message, okLabel = 'Löschen') {
+  return new Promise((resolve) => {
+    document.getElementById('confirmDialogMessage').textContent = message;
+    document.getElementById('confirmDialogOk').textContent = okLabel;
+    document.getElementById('confirmDialogModal').classList.add('show');
+    const okBtn = document.getElementById('confirmDialogOk');
+    const cancelBtn = document.getElementById('confirmDialogCancel');
+    function cleanup() {
+      document.getElementById('confirmDialogModal').classList.remove('show');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+    }
+    function onOk() { cleanup(); resolve(true); }
+    function onCancel() { cleanup(); resolve(false); }
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+}
+
+function setSyncStatus(ok) {
+  const dot = document.getElementById('syncDot');
+  const text = document.getElementById('syncStatusText');
+  if (!dot || !text) return;
+  dot.style.background = ok ? 'var(--success)' : 'var(--danger)';
+  text.textContent = ok ? 'Synchronisiert' : 'Offline – lokaler Cache';
+}
+
+function filterByTag(category) {
+  switchTab('search');
+  document.getElementById('searchInput').value = category;
+  renderSearch();
 }
 
 function daysSince(ts) {
@@ -1481,7 +1544,15 @@ async function renderHexGrid() {
 
   const containers = state.containers;
   if (containers.length === 0) {
-    grid.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted-2);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;">NOCH KEINE BEHÄLTER<br><br><button class="btn" style="margin-top:8px;" onclick="openContainerModal()">+ Ersten anlegen</button></div>`;
+    grid.innerHTML = `
+      <div style="padding:40px 20px;text-align:center;">
+        <div style="font-size:36px;opacity:0.2;margin-bottom:14px;">▦</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--ink);margin-bottom:8px;letter-spacing:0.06em;">Willkommen bei Findly</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;max-width:260px;margin:0 auto 20px;">
+          Lege Behälter an, weise Objekte zu und finde alles per QR-Code oder Suche wieder.
+        </div>
+        <button class="btn" onclick="openContainerModal()">+ Ersten Behälter anlegen</button>
+      </div>`;
     return;
   }
 
@@ -1681,7 +1752,7 @@ async function saveContainer() {
 
 async function deleteContainer() {
   if (!editingContainer) return;
-  if (!confirm('Behälter und alle darin enthaltenen Items wirklich löschen?')) return;
+  if (!await confirmDialog('Behälter und alle darin enthaltenen Items wirklich löschen?')) return;
   const c = state.containers.find(x => x.id === editingContainer);
   if (c?.photoKey) await deletePhoto(c.photoKey);
   const itemsToDelete = state.items.filter(i => i.containerId === editingContainer);
@@ -1741,6 +1812,7 @@ async function renderDetailItems() {
     const photo = it.photoKey ? await loadPhoto(it.photoKey) : null;
     const row = document.createElement('div');
     row.className = 'item-row';
+    row.dataset.itemId = it.id;
     row.onclick = () => openItemModal(it.id);
     row.innerHTML = `
       <div class="thumb" ${photo ? `style="background-image:url(${photo})"` : ''}>${photo ? '' : '◎'}</div>
@@ -1841,7 +1913,7 @@ async function saveItem() {
 
 async function deleteItem() {
   if (!editingItem) return;
-  if (!confirm('Item wirklich löschen?')) return;
+  if (!await confirmDialog('Item wirklich löschen?')) return;
   const it = state.items.find(x => x.id === editingItem);
   if (it?.photoKey) await deletePhoto(it.photoKey);
   state.items = state.items.filter(x => x.id !== editingItem);
@@ -1912,15 +1984,13 @@ function handleScan(data) {
     toast(`Behälter ${code} gefunden`);
     setTimeout(() => { switchTab('overview'); openContainerDetail(c.id); }, 400);
   } else {
-    if (confirm(`Behälter "${code}" nicht gefunden. Jetzt anlegen?`)) {
+    confirmDialog(`Behälter "${code}" nicht gefunden. Jetzt anlegen?`, 'Jetzt anlegen').then(ok => {
       switchTab('overview');
-      setTimeout(() => {
+      if (ok) setTimeout(() => {
         openContainerModal();
         document.getElementById('containerIdInput').value = code;
       }, 200);
-    } else {
-      switchTab('overview');
-    }
+    });
   }
 }
 
@@ -1955,7 +2025,20 @@ async function renderSearch() {
     const photo = it.photoKey ? await loadPhoto(it.photoKey) : null;
     const div = document.createElement('div');
     div.className = 'search-result';
-    div.onclick = () => { closeAllModals(); openContainerDetail(c.id); };
+    div.onclick = async () => {
+      closeAllModals();
+      await openContainerDetail(c.id);
+      setTimeout(() => {
+        const rows = document.querySelectorAll('#detailItems .item-row');
+        rows.forEach(row => {
+          if (row.dataset.itemId === it.id) {
+            row.style.outline = '2px solid var(--primary)';
+            row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            setTimeout(() => { row.style.outline = ''; }, 2000);
+          }
+        });
+      }, 350);
+    };
     div.innerHTML = `
       <div class="thumb" ${photo ? `style="background-image:url(${photo})"` : ''}></div>
       <div class="info">
@@ -2023,18 +2106,34 @@ async function renderDust() {
 async function dustAction(itemId, action) {
   const it = state.items.find(x => x.id === itemId);
   if (!it) return;
+  const prevStatus = it.status;
+  const prevLastUsed = it.lastUsed;
+
   if (action === 'keep') {
     it.lastUsed = Date.now();
-    toast('Behalten – Datum aktualisiert');
+    saveState();
+    await renderDust();
+    toastWithUndo('Behalten – Datum aktualisiert', () => {
+      const item = state.items.find(x => x.id === itemId);
+      if (item) { item.lastUsed = prevLastUsed; saveState(); renderDust(); }
+    });
   } else if (action === 'sell') {
     it.status = 'sell';
-    toast('Zum Verkaufen markiert');
+    saveState();
+    await renderDust();
+    toastWithUndo('Zum Verkaufen markiert', () => {
+      const item = state.items.find(x => x.id === itemId);
+      if (item) { item.status = prevStatus; saveState(); renderDust(); }
+    });
   } else if (action === 'trash') {
     it.status = 'trash';
-    toast('In den Papierkorb');
+    saveState();
+    await renderDust();
+    toastWithUndo('In den Papierkorb', () => {
+      const item = state.items.find(x => x.id === itemId);
+      if (item) { item.status = prevStatus; saveState(); renderDust(); }
+    });
   }
-  saveState();
-  await renderDust();
 }
 
 // ============================================================
@@ -2238,7 +2337,7 @@ async function exportData() {
 async function importData(e) {
   const file = e.target.files[0];
   if (!file) return;
-  if (!confirm('Aktuelle Daten überschreiben?')) return;
+  if (!await confirmDialog('Aktuelle Daten überschreiben? Dieser Schritt kann nicht rückgängig gemacht werden.', 'Ja, überschreiben')) return;
   try {
     const text = await file.text();
     const data = JSON.parse(text);
@@ -2259,8 +2358,7 @@ async function importData(e) {
 }
 
 async function resetAll() {
-  if (!confirm('WIRKLICH alle Daten löschen?')) return;
-  if (!confirm('Bist du sicher? Das ist nicht rückgängig zu machen!')) return;
+  if (!await confirmDialog('WIRKLICH alle Daten löschen? Das ist endgültig und kann nicht rückgängig gemacht werden.', 'Alle Daten löschen')) return;
   state = { containers: [], items: [], apiKey: state.apiKey };
   saveState();
   const tx = DB.transaction('photos', 'readwrite');
