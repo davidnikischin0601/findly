@@ -1461,7 +1461,7 @@ async function renderDust() {
   }
 }
 
-function dustAction(itemId, action) {
+async function dustAction(itemId, action) {
   const it = state.items.find(x => x.id === itemId);
   if (!it) return;
   if (action === 'keep') {
@@ -1475,7 +1475,7 @@ function dustAction(itemId, action) {
     toast('In den Papierkorb');
   }
   saveState();
-  renderDust();
+  await renderDust();
 }
 
 // ============================================================
@@ -1587,6 +1587,7 @@ function printQRCodes() {
     return;
   }
   const w = window.open('', '_blank');
+  if (!w) { toast('Popup blockiert – bitte Popups erlauben', true); return; }
   let html = `
 <!DOCTYPE html><html><head><title>QR-Codes Garage</title>
 <style>
@@ -1683,6 +1684,8 @@ async function importData(e) {
     toast('Backup geladen');
   } catch (err) {
     toast('Import fehlgeschlagen', true);
+  } finally {
+    e.target.value = '';
   }
 }
 
