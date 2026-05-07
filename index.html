@@ -930,6 +930,30 @@ nav.tabs button .icon { font-size: 18px; }
 .btn-row { display: flex; gap: 8px; }
 .btn-row .btn { flex: 1; }
 
+/* ── PULL-TO-REFRESH ── */
+#ptr {
+  position: fixed;
+  top: var(--topbar-h);
+  left: 50%;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  color: var(--muted-2);
+  display: grid;
+  place-items: center;
+  z-index: 200;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-50px);
+}
+#ptr.ptr-ready { color: var(--primary); border-color: var(--primary); }
+#ptr.ptr-snap { transition: transform 0.25s ease; }
+@keyframes ptr-spin {
+  0%   { transform: translateX(-50%) translateY(10px) rotate(0deg); }
+  100% { transform: translateX(-50%) translateY(10px) rotate(360deg); }
+}
+#ptr.ptr-loading { animation: ptr-spin 0.35s ease-in forwards; }
+
 /* ── MOBILE: topbar vereinfachen ── */
 @media (max-width: 767px) {
   .topbar-brand { width: auto; border-right: none; flex: 1; }
@@ -1184,6 +1208,12 @@ nav.tabs button .icon { font-size: 18px; }
     <span class="icon">⚙</span><span>Konto</span>
   </button>
 </nav>
+
+<div id="ptr">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 .49-3"/>
+  </svg>
+</div>
 
 </div><!-- /.app-shell -->
 
@@ -2715,6 +2745,42 @@ function migrateLocalPhotosToRTDB() {
     // Wenn neuer SW die Kontrolle übernimmt → Seite neu laden
     navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
   }
+})();
+
+// ── PULL-TO-REFRESH ──────────────────────────────────────────
+(function() {
+  const main = document.querySelector('.main');
+  const ptr  = document.getElementById('ptr');
+  const THRESHOLD = 70;
+  let startY = 0, curDY = 0;
+
+  main.addEventListener('touchstart', e => {
+    if (main.scrollTop === 0) startY = e.touches[0].clientY;
+  }, { passive: true });
+
+  main.addEventListener('touchmove', e => {
+    if (!startY) return;
+    curDY = Math.max(0, e.touches[0].clientY - startY);
+    if (curDY === 0) return;
+    const progress = Math.min(curDY / THRESHOLD, 1);
+    const y = -50 + progress * 60;
+    ptr.style.transform = `translateX(-50%) translateY(${y}px) rotate(${progress * 200}deg)`;
+    ptr.classList.toggle('ptr-ready', curDY >= THRESHOLD);
+  }, { passive: true });
+
+  main.addEventListener('touchend', () => {
+    if (!startY) return;
+    if (curDY >= THRESHOLD) {
+      ptr.style.transform = 'translateX(-50%) translateY(10px) rotate(0deg)';
+      ptr.classList.add('ptr-loading');
+      setTimeout(() => location.reload(), 400);
+    } else {
+      ptr.classList.add('ptr-snap');
+      ptr.style.transform = 'translateX(-50%) translateY(-50px)';
+      setTimeout(() => { ptr.classList.remove('ptr-snap', 'ptr-ready'); }, 300);
+    }
+    startY = 0; curDY = 0;
+  }, { passive: true });
 })();
 </script>
 </body>
