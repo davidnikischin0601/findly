@@ -2437,7 +2437,6 @@ function closeAllModals() { document.querySelectorAll('.modal-bg').forEach(m => 
   if (synced) {
     updateStats();
     renderOverview();
-    toast('Daten synchronisiert');
   }
 
   if ('serviceWorker' in navigator) {
