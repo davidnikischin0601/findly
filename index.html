@@ -928,6 +928,21 @@ nav.tabs button .icon { font-size: 18px; }
 }
 #ptr.ptr-loading { display: grid; animation: ptr-spin 0.35s ease-in forwards; }
 
+/* ── ROOM TABS ── */
+.room-tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.room-tab {
+  background: var(--surface-2); border: 1px solid var(--border-2);
+  border-radius: var(--radius); color: var(--muted); padding: 6px 14px;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.room-tab.active { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+.room-tab-add {
+  background: none; border: 1px dashed var(--border-2); border-radius: var(--radius);
+  color: var(--muted-2); padding: 6px 12px; font-size: 12px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.room-tab-add:hover { color: var(--ink); border-color: var(--muted); }
+
 /* ── MOBILE: topbar vereinfachen + Platz für Tab-Bar ── */
 @media (max-width: 767px) {
   .topbar-brand { width: auto; border-right: none; flex: 1; }
@@ -1014,15 +1029,17 @@ nav.tabs button .icon { font-size: 18px; }
     <!-- ── ÜBERSICHT ── -->
     <div class="view active" id="view-overview">
       <div class="view-header">
-        <div class="view-breadcrumb">haushalt / garage</div>
-        <div class="view-heading">Garage</div>
+        <div class="view-breadcrumb">haushalt / räume</div>
+        <div class="room-tabs" id="roomTabs"></div>
+        <div class="view-heading" id="overviewHeading">Garage</div>
         <div class="view-pills">
           <span class="view-pill highlight"><span id="itemCountPill">0</span> Objekte</span>
           <span class="view-pill"><span id="containerCount2">0</span> Behälter</span>
           <span class="view-pill warn" id="dustPill" style="display:none;"></span>
           <div class="view-actions">
             <button class="btn secondary" onclick="printQRCodes()" style="padding:5px 12px;font-size:10px;">Etikett drucken</button>
-            <button class="btn" onclick="openContainerModal()" style="padding:5px 14px;font-size:10px;">+ Neuer Behälter</button>
+            <button class="btn secondary" onclick="openItemModalStandalone()" style="padding:5px 12px;font-size:10px;">+ Item</button>
+            <button class="btn" onclick="openContainerModal()" style="padding:5px 14px;font-size:10px;">+ Behälter</button>
           </div>
         </div>
       </div>
@@ -1229,6 +1246,28 @@ nav.tabs button .icon { font-size: 18px; }
   </div>
 </div>
 
+<!-- ── MODAL: RAUM ── -->
+<div class="modal-bg" id="modalRoom">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="roomModalTitle">Neuer Raum</span>
+      <button class="modal-close" onclick="closeModal('modalRoom')">×</button>
+    </div>
+    <div class="field" style="margin-top:14px;">
+      <label>Name</label>
+      <input type="text" id="roomNameInput" placeholder="z.B. Keller">
+    </div>
+    <div class="field">
+      <label>Kürzel für QR-Codes (1–3 Buchstaben)</label>
+      <input type="text" id="roomCodeInput" placeholder="z.B. K" maxlength="3" style="text-transform:uppercase;">
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="saveRoom()">Speichern</button>
+      <button class="btn ghost" id="deleteRoomBtn" onclick="deleteRoom()" style="display:none;">Raum löschen</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── MODAL: DETAIL ── -->
 <div class="modal-bg" id="modalDetail">
   <div class="modal">
@@ -1280,6 +1319,10 @@ nav.tabs button .icon { font-size: 18px; }
     <button class="btn secondary full" id="aiDetectBtn" onclick="detectItem()" style="margin-top:10px;display:none;">
       <span>KI: Was ist das?</span>
     </button>
+    <div class="field" id="itemDestField" style="display:none; margin-top:14px;">
+      <label>Zuordnung</label>
+      <select id="itemDestInput"></select>
+    </div>
     <div class="field" style="margin-top:14px;">
       <label>Name</label>
       <input type="text" id="itemNameInput" placeholder="z.B. Maulschlüssel 10mm">
@@ -1353,7 +1396,10 @@ let state = {
 
 let editingContainer = null;
 let editingItem = null;
+let editingRoom = null;
 let currentContainer = null;
+let currentRoomId = null;
+let itemModalStandaloneMode = false;
 let scannerStream = null;
 let scannerActive = false;
 let viewMode = 'karte';
@@ -1439,6 +1485,7 @@ function loadLocalState() {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
+      state.rooms = parsed.rooms || [];
       state.containers = parsed.containers || [];
       state.items = parsed.items || [];
     } catch (e) { console.error(e); }
@@ -1466,7 +1513,7 @@ async function syncFromFirebase() {
 }
 
 function saveState() {
-  const data = { containers: state.containers, items: state.items };
+  const data = { rooms: state.rooms, containers: state.containers, items: state.items };
   localStorage.setItem('garage_state', JSON.stringify(data));
   fbRef.set(data)
     .then(() => setSyncStatus(true))
@@ -1601,7 +1648,7 @@ async function renderHexGrid() {
   const grid = document.getElementById('hexGrid');
   grid.innerHTML = '';
 
-  const containers = state.containers;
+  const containers = state.containers.filter(c => c.roomId === currentRoomId);
   if (containers.length === 0) {
     grid.innerHTML = `
       <div style="padding:40px 20px;text-align:center;">
@@ -1661,9 +1708,10 @@ async function renderHexGrid() {
 async function renderListView() {
   const grid = document.getElementById('containerGrid');
   grid.innerHTML = '';
-  document.getElementById('containerCountLabel').textContent = state.containers.length;
+  const roomCont = state.containers.filter(c => c.roomId === currentRoomId);
+  document.getElementById('containerCountLabel').textContent = roomCont.length;
 
-  for (const c of state.containers) {
+  for (const c of roomCont) {
     const itemCount = state.items.filter(i => i.containerId === c.id && i.status === 'active').length;
     const days = daysSince(c.lastAccessed);
     const isWarn = days !== null && days > 180;
@@ -1698,24 +1746,117 @@ async function renderListView() {
 }
 
 // ============================================================
+//   RÄUME
+// ============================================================
+
+function migrateRooms() {
+  if (!state.rooms) state.rooms = [];
+  if (state.rooms.length === 0) {
+    const defaultRoom = { id: uid(), code: 'G', name: 'Garage', created: Date.now() };
+    state.rooms = [defaultRoom];
+    state.containers.forEach(c => { if (!c.roomId) c.roomId = defaultRoom.id; });
+    state.items.forEach(i => { if (!i.roomId) i.roomId = defaultRoom.id; });
+  } else {
+    const fallbackId = state.rooms[0].id;
+    state.containers.forEach(c => { if (!c.roomId) c.roomId = fallbackId; });
+    state.items.forEach(i => { if (!i.roomId) i.roomId = fallbackId; });
+  }
+  if (!currentRoomId || !state.rooms.find(r => r.id === currentRoomId))
+    currentRoomId = state.rooms[0].id;
+}
+
+function renderRoomTabs() {
+  const tabs = document.getElementById('roomTabs');
+  const heading = document.getElementById('overviewHeading');
+  if (!tabs) return;
+  tabs.innerHTML = '';
+  state.rooms.forEach(room => {
+    const btn = document.createElement('button');
+    btn.className = 'room-tab' + (room.id === currentRoomId ? ' active' : '');
+    btn.textContent = room.name;
+    btn.onclick = () => { currentRoomId = room.id; renderOverview(); };
+    btn.title = 'Doppelklick zum Bearbeiten';
+    btn.ondblclick = e => { e.stopPropagation(); openRoomModal(room.id); };
+    tabs.appendChild(btn);
+  });
+  const addBtn = document.createElement('button');
+  addBtn.className = 'room-tab-add';
+  addBtn.textContent = '+ Raum';
+  addBtn.onclick = () => openRoomModal();
+  tabs.appendChild(addBtn);
+  if (heading) heading.textContent = state.rooms.find(r => r.id === currentRoomId)?.name || '';
+}
+
+function openRoomModal(id = null) {
+  editingRoom = id;
+  const room = id ? state.rooms.find(r => r.id === id) : null;
+  document.getElementById('roomModalTitle').textContent = room ? 'Raum bearbeiten' : 'Neuer Raum';
+  document.getElementById('roomNameInput').value = room ? room.name : '';
+  document.getElementById('roomCodeInput').value = room ? room.code : '';
+  document.getElementById('deleteRoomBtn').style.display = (room && state.rooms.length > 1) ? 'flex' : 'none';
+  document.getElementById('modalRoom').classList.add('show');
+}
+
+function saveRoom() {
+  const name = document.getElementById('roomNameInput').value.trim();
+  const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+  if (!name) { alert('Name ist nötig'); return; }
+  if (!code) { alert('Kürzel ist nötig (z.B. K für Keller)'); return; }
+  if (editingRoom) {
+    const room = state.rooms.find(r => r.id === editingRoom);
+    room.name = name; room.code = code;
+  } else {
+    const id = uid();
+    state.rooms.push({ id, code, name, created: Date.now() });
+    currentRoomId = id;
+  }
+  saveState();
+  closeModal('modalRoom');
+  renderOverview();
+}
+
+async function deleteRoom() {
+  if (state.rooms.length <= 1) { alert('Der letzte Raum kann nicht gelöscht werden'); return; }
+  const room = state.rooms.find(r => r.id === editingRoom);
+  if (!room) return;
+  const cids = state.containers.filter(c => c.roomId === editingRoom).map(c => c.id);
+  const msg = cids.length > 0
+    ? `Raum "${room.name}" mit ${cids.length} Behälter(n) wirklich löschen?`
+    : `Raum "${room.name}" wirklich löschen?`;
+  if (!await confirmDialog(msg)) return;
+  for (const c of state.containers.filter(c => c.roomId === editingRoom)) {
+    if (c.photoKey) await deletePhoto(c.photoKey);
+    if (c.locationPhotoKey) await deletePhoto(c.locationPhotoKey);
+  }
+  for (const it of state.items.filter(i => cids.includes(i.containerId) || i.roomId === editingRoom)) {
+    if (it.photoKey) await deletePhoto(it.photoKey);
+  }
+  state.items = state.items.filter(i => !cids.includes(i.containerId) && i.roomId !== editingRoom);
+  state.containers = state.containers.filter(c => c.roomId !== editingRoom);
+  state.rooms = state.rooms.filter(r => r.id !== editingRoom);
+  currentRoomId = state.rooms[0].id;
+  saveState();
+  closeModal('modalRoom');
+  renderOverview();
+}
+
+// ============================================================
 //   ÜBERSICHT (called by switchTab)
 // ============================================================
 
 async function renderOverview() {
-  // Update pills
-  const activeItems = state.items.filter(i => i.status === 'active').length;
-  document.getElementById('itemCountPill').textContent = activeItems;
-  document.getElementById('containerCount2').textContent = state.containers.length;
+  migrateRooms();
+  renderRoomTabs();
 
-  // Dust pill
+  const roomContainers = state.containers.filter(c => c.roomId === currentRoomId);
+  const activeItems = state.items.filter(i => i.status === 'active' && roomContainers.some(c => c.id === i.containerId)).length;
+  document.getElementById('itemCountPill').textContent = activeItems;
+  document.getElementById('containerCount2').textContent = roomContainers.length;
+
   const dustCount = state.items.filter(i => i.status === 'active' && daysSince(i.lastUsed || i.created) >= 180).length;
   const dustPill = document.getElementById('dustPill');
-  if (dustCount > 0) {
-    dustPill.style.display = 'inline-block';
-    dustPill.textContent = `${dustCount} Ablauf`;
-  } else {
-    dustPill.style.display = 'none';
-  }
+  if (dustCount > 0) { dustPill.style.display = 'inline-block'; dustPill.textContent = `${dustCount} Ablauf`; }
+  else dustPill.style.display = 'none';
 
   await renderHexGrid();
   if (viewMode === 'liste') await renderListView();
@@ -1772,12 +1913,14 @@ function openContainerModal(id = null) {
 }
 
 function suggestNextCode() {
+  const room = state.rooms?.find(r => r.id === currentRoomId);
+  const prefix = room ? room.code : 'G';
   const existing = state.containers.map(c => c.code);
   for (let i = 1; i < 100; i++) {
-    const code = `G-${i.toString().padStart(2, '0')}`;
+    const code = `${prefix}-${i.toString().padStart(2, '0')}`;
     if (!existing.includes(code)) return code;
   }
-  return 'G-XX';
+  return `${prefix}-XX`;
 }
 
 document.getElementById('containerPhotoFile').addEventListener('change', async (e) => {
@@ -1831,7 +1974,7 @@ async function saveContainer() {
     const locKey = locPhotoData ? `cl_${id}` : null;
     if (photoData) await savePhoto(photoKey, photoData);
     if (locPhotoData) await savePhoto(locKey, locPhotoData);
-    state.containers.push({ id, code, name, location, photoKey, locationPhotoKey: locKey, created: Date.now(), lastAccessed: Date.now() });
+    state.containers.push({ id, code, name, location, photoKey, locationPhotoKey: locKey, roomId: currentRoomId, created: Date.now(), lastAccessed: Date.now() });
   }
 
   saveState();
@@ -1934,7 +2077,41 @@ function editCurrentContainer() {
 //   ITEMS
 // ============================================================
 
+function openItemModalStandalone() {
+  itemModalStandaloneMode = true;
+  editingItem = null;
+  document.getElementById('itemModalTitle').textContent = 'Neues Item';
+  document.getElementById('itemNameInput').value = '';
+  document.getElementById('itemCategoryInput').value = 'werkzeug';
+  document.getElementById('itemNoteInput').value = '';
+  document.getElementById('deleteItemBtn').style.display = 'none';
+  document.getElementById('aiDetectBtn').style.display = 'none';
+  const photoInput = document.getElementById('itemPhotoInput');
+  photoInput.style.backgroundImage = '';
+  photoInput.classList.remove('has-photo');
+  photoInput.querySelector('.placeholder').style.display = 'block';
+  delete photoInput.dataset.photoData;
+
+  const destInput = document.getElementById('itemDestInput');
+  destInput.innerHTML = '';
+  const roomConts = state.containers.filter(c => c.roomId === currentRoomId);
+  roomConts.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = `${c.code} – ${c.name}`;
+    destInput.appendChild(opt);
+  });
+  const opt = document.createElement('option');
+  opt.value = '__ausmisten__';
+  opt.textContent = '→ Ausmisten';
+  destInput.appendChild(opt);
+  document.getElementById('itemDestField').style.display = 'block';
+  document.getElementById('modalItem').classList.add('show');
+}
+
 function openItemModal(id = null) {
+  itemModalStandaloneMode = false;
+  document.getElementById('itemDestField').style.display = 'none';
   editingItem = id;
   const it = id ? state.items.find(x => x.id === id) : null;
 
@@ -1993,22 +2170,41 @@ async function saveItem() {
       await savePhoto(photoKey, photoData);
       it.photoKey = photoKey;
     }
+    saveState();
+    closeModal('modalItem');
+    await renderDetailItems();
+  } else if (itemModalStandaloneMode) {
+    const dest = document.getElementById('itemDestInput').value;
+    const id = uid();
+    const photoKey = photoData ? `i_${id}` : null;
+    if (photoData) await savePhoto(photoKey, photoData);
+    const isAusmisten = dest === '__ausmisten__';
+    state.items.push({
+      id, containerId: isAusmisten ? null : dest,
+      roomId: currentRoomId,
+      name, category, note,
+      photoKey, status: isAusmisten ? 'trash' : 'active',
+      created: Date.now(), lastUsed: Date.now()
+    });
+    saveState();
+    closeModal('modalItem');
+    itemModalStandaloneMode = false;
+    if (isAusmisten) renderDust(); else renderOverview();
   } else {
     const id = uid();
     const photoKey = photoData ? `i_${id}` : null;
     if (photoData) await savePhoto(photoKey, photoData);
     state.items.push({
       id, containerId: currentContainer.id,
+      roomId: currentContainer.roomId || currentRoomId,
       name, category, note,
       photoKey, status: 'active',
       created: Date.now(), lastUsed: Date.now()
     });
+    saveState();
+    closeModal('modalItem');
+    await renderDetailItems();
   }
-
-  saveState();
-  closeModal('modalItem');
-  await renderDetailItems();
-  toast(editingItem ? 'Item aktualisiert' : 'Item hinzugefügt');
 }
 
 async function deleteItem() {
@@ -2693,12 +2889,14 @@ function migrateLocalPhotosToRTDB() {
   }
 
   loadLocalState();
+  migrateRooms();
   updateApiKeyStatus();
   updateStats();
   renderOverview();
 
   const synced = await syncFromFirebase();
   if (synced) {
+    migrateRooms();
     updateStats();
     renderOverview();
   }
