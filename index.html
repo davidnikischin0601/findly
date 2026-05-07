@@ -1974,55 +1974,71 @@ async function startScanner() {
   status.textContent = 'KAMERA WIRD GESTARTET…';
 
   try {
-    // Rückkamera bevorzugen, aber nicht erzwingen (ideal statt exact)
     try {
       scannerStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }
       });
     } catch {
-      // Fallback: beliebige Kamera
       scannerStream = await navigator.mediaDevices.getUserMedia({ video: true });
     }
 
+    // Kontinuierlichen Autofokus aktivieren
+    try {
+      const track = scannerStream.getVideoTracks()[0];
+      const caps = track.getCapabilities ? track.getCapabilities() : {};
+      if (caps.focusMode && caps.focusMode.includes('continuous')) {
+        await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+      }
+    } catch (e) { /* nicht unterstützt */ }
+
     video.srcObject = scannerStream;
     await video.play();
+    status.textContent = 'QR-CODE INS BILD HALTEN';
 
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-    const MAX_DIM = 640;
-    function tick() {
-      if (!scannerActive) return;
-      // videoWidth > 0 ist zuverlässiger als readyState für Live-Streams
-      if (video.videoWidth > 0 && video.videoHeight > 0) {
-        const scale = Math.min(1, MAX_DIM / Math.max(video.videoWidth, video.videoHeight));
-        canvas.width  = Math.round(video.videoWidth  * scale);
-        canvas.height = Math.round(video.videoHeight * scale);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Primär: native BarcodeDetector API (Android Chrome – schnell, guter Fokus)
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      async function detectNative() {
+        if (!scannerActive) return;
         try {
-          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imgData.data, imgData.width, imgData.height);
-          if (code && code.data) {
-            handleScan(code.data);
-            return;
-          }
+          const codes = await detector.detect(video);
+          if (codes.length > 0) { handleScan(codes[0].rawValue); return; }
         } catch (e) { /* ignore */ }
+        requestAnimationFrame(detectNative);
+      }
+      requestAnimationFrame(detectNative);
+
+    // Fallback: jsQR (iOS / ältere Browser)
+    } else {
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const MAX_DIM = 800;
+      function tick() {
+        if (!scannerActive) return;
+        if (video.videoWidth > 0) {
+          const scale = Math.min(1, MAX_DIM / Math.max(video.videoWidth, video.videoHeight));
+          canvas.width  = Math.round(video.videoWidth  * scale);
+          canvas.height = Math.round(video.videoHeight * scale);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          try {
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imgData.data, imgData.width, imgData.height);
+            if (code && code.data) { handleScan(code.data); return; }
+          } catch (e) { /* ignore */ }
+        }
+        requestAnimationFrame(tick);
       }
       requestAnimationFrame(tick);
     }
-    requestAnimationFrame(tick);
-    status.textContent = 'QR-CODE INS BILD HALTEN';
 
   } catch (err) {
     scannerActive = false;
     let msg = 'KAMERA NICHT VERFÜGBAR';
     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
-      msg = 'ZUGRIFF VERWEIGERT – In den Browser-Einstellungen Kamera erlauben';
-    else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError')
+      msg = 'ZUGRIFF VERWEIGERT – In Browser-Einstellungen Kamera erlauben';
+    else if (err.name === 'NotFoundError')
       msg = 'KEINE KAMERA GEFUNDEN';
-    else if (err.name === 'NotSupportedError')
-      msg = 'HTTPS ERFORDERLICH – Bitte GitHub-Link nutzen';
     status.innerHTML = msg + `<br><button class="btn secondary" onclick="startScanner()" style="margin-top:12px;font-size:10px;">Erneut versuchen</button>`;
-    console.error('Scanner-Fehler:', err.name, err.message);
+    console.error('Scanner:', err.name, err.message);
   }
 }
 
