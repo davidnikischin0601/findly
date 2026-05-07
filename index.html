@@ -12,6 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap');
@@ -1303,6 +1304,7 @@ firebase.initializeApp({
   appId: "1:648741985758:web:7281cf217864e6d2dd514f"
 });
 const fbRef = firebase.database().ref('garage');
+const storage = firebase.storage();
 
 // ============================================================
 //   STATE & PERSISTENCE (IndexedDB für Fotos, Firebase + localStorage für Rest)
@@ -1362,6 +1364,26 @@ function deletePhoto(key) {
     tx.oncomplete = resolve;
     tx.onerror = resolve;
   });
+}
+
+// ---- Firebase Storage für Fotos ----
+async function uploadToStorage(key, dataUrl) {
+  const ref = storage.ref('photos/' + key);
+  const base64 = dataUrl.split(',')[1];
+  const snap = await ref.putString(base64, 'base64', { contentType: 'image/jpeg' });
+  return snap.ref.getDownloadURL();
+}
+
+async function deleteFromStorage(url) {
+  if (!url || !url.startsWith('http')) return;
+  try { await storage.refFromURL(url).delete(); } catch (e) { /* bereits gelöscht oder kein Zugriff */ }
+}
+
+// Gibt die Foto-URL zurück: Firebase Storage URL (neu) oder IndexedDB base64 (Altdaten)
+async function getPhotoUrl(obj) {
+  if (obj && obj.photoUrl) return obj.photoUrl;
+  if (obj && obj.photoKey) return loadPhoto(obj.photoKey);
+  return null;
 }
 
 function loadLocalState() {
@@ -1608,7 +1630,7 @@ async function renderListView() {
     const itemCount = state.items.filter(i => i.containerId === c.id && i.status === 'active').length;
     const days = daysSince(c.lastAccessed);
     const isWarn = days !== null && days > 180;
-    const photo = c.photoKey ? await loadPhoto(c.photoKey) : null;
+    const photo = await getPhotoUrl(c);
 
     const row = document.createElement('div');
     row.className = 'container-row';
@@ -1683,17 +1705,17 @@ function openContainerModal(id = null) {
   photoInput.classList.remove('has-photo');
   photoInput.querySelector('.placeholder').style.display = 'block';
 
-  if (c && c.photoKey) {
-    loadPhoto(c.photoKey).then(p => {
-      if (p) {
-        photoInput.style.backgroundImage = `url(${p})`;
+  delete photoInput.dataset.photoData;
+  if (c) {
+    getPhotoUrl(c).then(url => {
+      if (url) {
+        photoInput.style.backgroundImage = `url(${url})`;
         photoInput.classList.add('has-photo');
         photoInput.querySelector('.placeholder').style.display = 'none';
-        photoInput.dataset.photoData = p;
+        if (url.startsWith('http')) photoInput.dataset.photoData = url;
+        else photoInput.dataset.photoData = url;
       }
     });
-  } else {
-    delete photoInput.dataset.photoData;
   }
 
   document.getElementById('modalContainer').classList.add('show');
@@ -1732,16 +1754,17 @@ async function saveContainer() {
   if (editingContainer) {
     const c = state.containers.find(x => x.id === editingContainer);
     c.code = code; c.name = name; c.location = location;
-    if (photoData) {
-      const photoKey = c.photoKey || `c_${c.id}`;
-      await savePhoto(photoKey, photoData);
-      c.photoKey = photoKey;
+    if (photoData && !photoData.startsWith('http')) {
+      if (c.photoUrl) deleteFromStorage(c.photoUrl).catch(() => {});
+      try { c.photoUrl = await uploadToStorage(`c_${c.id}`, photoData); } catch (e) { toast('Foto-Upload fehlgeschlagen: ' + e.message, true); return; }
     }
   } else {
     const id = uid();
-    const photoKey = photoData ? `c_${id}` : null;
-    if (photoData) await savePhoto(photoKey, photoData);
-    state.containers.push({ id, code, name, location, photoKey, created: Date.now(), lastAccessed: Date.now() });
+    let photoUrl = null;
+    if (photoData && !photoData.startsWith('http')) {
+      try { photoUrl = await uploadToStorage(`c_${id}`, photoData); } catch (e) { toast('Foto-Upload fehlgeschlagen: ' + e.message, true); return; }
+    }
+    state.containers.push({ id, code, name, location, photoUrl, photoKey: null, created: Date.now(), lastAccessed: Date.now() });
   }
 
   saveState();
@@ -1754,9 +1777,13 @@ async function deleteContainer() {
   if (!editingContainer) return;
   if (!await confirmDialog('Behälter und alle darin enthaltenen Items wirklich löschen?')) return;
   const c = state.containers.find(x => x.id === editingContainer);
-  if (c?.photoKey) await deletePhoto(c.photoKey);
+  if (c?.photoUrl) await deleteFromStorage(c.photoUrl);
+  else if (c?.photoKey) await deletePhoto(c.photoKey);
   const itemsToDelete = state.items.filter(i => i.containerId === editingContainer);
-  for (const it of itemsToDelete) if (it.photoKey) await deletePhoto(it.photoKey);
+  for (const it of itemsToDelete) {
+    if (it.photoUrl) await deleteFromStorage(it.photoUrl);
+    else if (it.photoKey) await deletePhoto(it.photoKey);
+  }
   state.items = state.items.filter(i => i.containerId !== editingContainer);
   state.containers = state.containers.filter(x => x.id !== editingContainer);
   saveState();
@@ -1784,10 +1811,8 @@ async function openContainerDetail(id) {
 
   const photoEl = document.getElementById('detailPhoto');
   photoEl.style.backgroundImage = '';
-  if (c.photoKey) {
-    const p = await loadPhoto(c.photoKey);
-    if (p) { photoEl.style.backgroundImage = `url(${p})`; }
-  }
+  const photoUrl = await getPhotoUrl(c);
+  if (photoUrl) photoEl.style.backgroundImage = `url(${photoUrl})`;
 
   const qrContainer = document.getElementById('detailQR');
   qrContainer.innerHTML = '';
@@ -1809,7 +1834,7 @@ async function renderDetailItems() {
   }
 
   for (const it of items) {
-    const photo = it.photoKey ? await loadPhoto(it.photoKey) : null;
+    const photo = await getPhotoUrl(it);
     const row = document.createElement('div');
     row.className = 'item-row';
     row.dataset.itemId = it.id;
@@ -1851,13 +1876,13 @@ function openItemModal(id = null) {
   photoInput.querySelector('.placeholder').style.display = 'block';
   delete photoInput.dataset.photoData;
 
-  if (it && it.photoKey) {
-    loadPhoto(it.photoKey).then(p => {
-      if (p) {
-        photoInput.style.backgroundImage = `url(${p})`;
+  if (it) {
+    getPhotoUrl(it).then(url => {
+      if (url) {
+        photoInput.style.backgroundImage = `url(${url})`;
         photoInput.classList.add('has-photo');
         photoInput.querySelector('.placeholder').style.display = 'none';
-        photoInput.dataset.photoData = p;
+        photoInput.dataset.photoData = url;
         document.getElementById('aiDetectBtn').style.display = 'flex';
       }
     });
@@ -1888,19 +1913,20 @@ async function saveItem() {
   if (editingItem) {
     const it = state.items.find(x => x.id === editingItem);
     it.name = name; it.category = category; it.note = note;
-    if (photoData) {
-      const photoKey = it.photoKey || `i_${it.id}`;
-      await savePhoto(photoKey, photoData);
-      it.photoKey = photoKey;
+    if (photoData && !photoData.startsWith('http')) {
+      if (it.photoUrl) deleteFromStorage(it.photoUrl).catch(() => {});
+      try { it.photoUrl = await uploadToStorage(`i_${it.id}`, photoData); } catch (e) { toast('Foto-Upload fehlgeschlagen: ' + e.message, true); return; }
     }
   } else {
     const id = uid();
-    const photoKey = photoData ? `i_${id}` : null;
-    if (photoData) await savePhoto(photoKey, photoData);
+    let photoUrl = null;
+    if (photoData && !photoData.startsWith('http')) {
+      try { photoUrl = await uploadToStorage(`i_${id}`, photoData); } catch (e) { toast('Foto-Upload fehlgeschlagen: ' + e.message, true); return; }
+    }
     state.items.push({
       id, containerId: currentContainer.id,
       name, category, note,
-      photoKey, status: 'active',
+      photoUrl, photoKey: null, status: 'active',
       created: Date.now(), lastUsed: Date.now()
     });
   }
@@ -1915,7 +1941,8 @@ async function deleteItem() {
   if (!editingItem) return;
   if (!await confirmDialog('Item wirklich löschen?')) return;
   const it = state.items.find(x => x.id === editingItem);
-  if (it?.photoKey) await deletePhoto(it.photoKey);
+  if (it?.photoUrl) await deleteFromStorage(it.photoUrl);
+  else if (it?.photoKey) await deletePhoto(it.photoKey);
   state.items = state.items.filter(x => x.id !== editingItem);
   saveState();
   closeModal('modalItem');
@@ -2022,7 +2049,7 @@ async function renderSearch() {
 
   for (const it of results) {
     const c = state.containers.find(x => x.id === it.containerId);
-    const photo = it.photoKey ? await loadPhoto(it.photoKey) : null;
+    const photo = await getPhotoUrl(it);
     const div = document.createElement('div');
     div.className = 'search-result';
     div.onclick = async () => {
@@ -2080,7 +2107,7 @@ async function renderDust() {
   for (const it of candidates) {
     const c = state.containers.find(x => x.id === it.containerId);
     const cls = it.age > 365 ? 'danger' : 'warn';
-    const photo = it.photoKey ? await loadPhoto(it.photoKey) : null;
+    const photo = await getPhotoUrl(it);
 
     const card = document.createElement('div');
     card.className = `dust-card ${cls}`;
@@ -2149,7 +2176,9 @@ async function detectItem() {
   btn.innerHTML = '<span class="spinner"></span><span>Analysiere…</span>';
 
   try {
-    const base64 = photoData.split(',')[1];
+    const imgSource = photoData.startsWith('http')
+      ? { type: 'url', url: photoData }
+      : { type: 'base64', media_type: 'image/jpeg', data: photoData.split(',')[1] };
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -2164,7 +2193,7 @@ async function detectItem() {
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+            { type: 'image', source: imgSource },
             { type: 'text', text: 'Du bist ein Garagen-Inventar-Helfer. Analysiere das Foto eines Werkzeugs/Garagen-Items. Antworte AUSSCHLIESSLICH als JSON ohne Markdown:\n{"name":"<kurzer präziser deutscher Name, z.B. \'Maulschlüssel 13mm\'>","category":"<eine von: werkzeug, kfz, garten, sport, saison, material, elektro, sonstiges>","note":"<kurze Erkennungsnotiz, max. 60 Zeichen>"}' }
           ]
         }]
@@ -2199,10 +2228,12 @@ async function getOrganizationTip() {
     const itemList = items.map(i => `- ${i.name} (${i.category})`).join('\n') || '(noch keine Items)';
 
     const content = [];
-    if (currentContainer.photoKey) {
-      const photo = await loadPhoto(currentContainer.photoKey);
-      if (photo) {
-        content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: photo.split(',')[1] } });
+    const containerPhoto = await getPhotoUrl(currentContainer);
+    if (containerPhoto) {
+      if (containerPhoto.startsWith('http')) {
+        content.push({ type: 'image', source: { type: 'url', url: containerPhoto } });
+      } else {
+        content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: containerPhoto.split(',')[1] } });
       }
     }
     content.push({
