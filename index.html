@@ -650,10 +650,11 @@ mark {
 
   <div class="field">
     <label>Claude API-Schlüssel (für KI-Erkennung)</label>
-    <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+    <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="new-password">
     <div style="font-size:11px;color:var(--text-faint);margin-top:6px;line-height:1.4;">
       Wird nur lokal im Browser gespeichert. Nötig für KI-Werkzeugerkennung und Organisations-Tipps.
     </div>
+    <div id="apiKeyStatus" style="display:none;font-size:11px;color:var(--success);margin-top:6px;">✓ API-Key gespeichert</div>
   </div>
   <button class="btn secondary" onclick="saveApiKey()">Speichern</button>
 
@@ -1627,9 +1628,21 @@ function printQRCodes() {
 // ============================================================
 
 function saveApiKey() {
-  state.apiKey = document.getElementById('apiKey').value.trim();
-  saveState();
-  toast('API-Key gespeichert');
+  const val = document.getElementById('apiKey').value.trim();
+  if (val) {
+    state.apiKey = val;
+    saveState();
+    document.getElementById('apiKey').value = '';
+    toast('API-Key gespeichert');
+  } else {
+    toast('Kein neuer Key eingegeben', true);
+  }
+  updateApiKeyStatus();
+}
+
+function updateApiKeyStatus() {
+  const statusEl = document.getElementById('apiKeyStatus');
+  statusEl.style.display = state.apiKey ? 'block' : 'none';
 }
 
 function updateStats() {
@@ -1679,7 +1692,7 @@ async function importData(e) {
       for (const [k, v] of Object.entries(data.photos)) await savePhoto(k, v);
     }
     saveState();
-    document.getElementById('apiKey').value = state.apiKey;
+    updateApiKeyStatus();
     renderOverview();
     toast('Backup geladen');
   } catch (err) {
@@ -1715,7 +1728,7 @@ function closeAllModals() {
 (async function init() {
   await openDB();
   loadState();
-  document.getElementById('apiKey').value = state.apiKey;
+  updateApiKeyStatus();
   updateStats();
   renderOverview();
 
