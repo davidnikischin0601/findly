@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f0f0f">
-<title>Garage Inventar</title>
+<title>Findly</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f59e0b'/><text x='50' y='68' font-size='60' text-anchor='middle' font-family='monospace' font-weight='bold'>G</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5' fill='%23FFD60A'/><text x='50' y='65' font-size='45' text-anchor='middle' font-family='monospace' font-weight='bold' fill='%230A0A0A'>F</text></svg>">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -14,30 +14,36 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #0a0a0a;
-  --bg-elev: #161616;
-  --bg-card: #1c1c1c;
-  --border: #2a2a2a;
-  --border-strong: #3a3a3a;
-  --text: #f5f5f5;
-  --text-dim: #a0a0a0;
-  --text-faint: #606060;
-  --accent: #f59e0b;
-  --accent-dim: #b27407;
-  --danger: #ef4444;
-  --success: #10b981;
-  --warn: #fbbf24;
+  --bg:        #0A0A0A;
+  --surface:   #141414;
+  --surface-2: #1A1A1A;
+  --surface-3: #222222;
+  --border:    #1F1F1F;
+  --border-2:  #2A2A2A;
+  --ink:       #E8EEF2;
+  --ink-2:     #C5CDD5;
+  --muted:     #9AA5B1;
+  --muted-2:   #6B7785;
+  --muted-3:   #3A3A3A;
+  --primary:   #FFD60A;
+  --primary-ink:#0A0A0A;
+  --amber:     #FFA319;
+  --danger:    #FF5A36;
+  --success:   #10b981;
+  --radius-sm: 4px;
+  --radius:    6px;
+  --radius-lg: 8px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 html, body {
   background: var(--bg);
-  color: var(--text);
-  font-family: 'Space Grotesk', sans-serif;
+  color: var(--ink);
+  font-family: 'Inter', sans-serif;
   font-size: 16px;
   min-height: 100vh;
   overscroll-behavior: none;
@@ -45,8 +51,8 @@ html, body {
 
 body {
   padding-bottom: 80px;
-  background-image: 
-    radial-gradient(circle at 20% 0%, rgba(245, 158, 11, 0.04) 0%, transparent 40%),
+  background-image:
+    radial-gradient(circle at 20% 0%, rgba(255, 214, 10, 0.03) 0%, transparent 40%),
     linear-gradient(180deg, var(--bg) 0%, #050505 100%);
 }
 
@@ -61,28 +67,23 @@ header {
   z-index: 50;
 }
 
+
 .logo-row { display: flex; align-items: center; gap: 12px; }
 .logo {
   width: 36px; height: 36px;
-  background: var(--accent);
   display: grid; place-items: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 800;
-  font-size: 22px;
-  color: #000;
-  border-radius: 4px;
 }
 h1 {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  letter-spacing: 0.15em;
+  font-size: 15px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 700;
 }
 .tag {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--text-faint);
+  font-size: 11px;
+  color: var(--muted);
   letter-spacing: 0.1em;
 }
 
@@ -90,15 +91,15 @@ h1 {
 nav.tabs {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  background: var(--bg-elev);
-  border-top: 1px solid var(--border-strong);
+  background: var(--surface);
+  border-top: 1px solid var(--border-2);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom);
 }
 nav.tabs button {
-  background: none; border: none; color: var(--text-faint);
+  background: none; border: none; color: var(--muted);
   padding: 12px 4px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
@@ -108,7 +109,7 @@ nav.tabs button {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   transition: color 0.15s;
 }
-nav.tabs button.active { color: var(--accent); }
+nav.tabs button.active { color: var(--primary); }
 nav.tabs button .icon { font-size: 20px; }
 
 /* ============ VIEWS ============ */
@@ -120,41 +121,41 @@ nav.tabs button .icon { font-size: 20px; }
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   letter-spacing: 0.2em;
-  color: var(--text-faint);
+  color: var(--muted);
   text-transform: uppercase;
   margin-bottom: 12px;
   display: flex; justify-content: space-between; align-items: center;
 }
-.view-title .count { color: var(--accent); }
+.view-title .count { color: var(--primary); }
 
 /* ============ BUTTONS ============ */
 button.btn {
-  background: var(--accent);
-  color: #000;
+  background: var(--primary);
+  color: var(--primary-ink);
   border: none;
   padding: 14px 20px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius);
   width: 100%;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   transition: transform 0.05s, background 0.15s;
 }
 button.btn:active { transform: scale(0.98); }
-button.btn.secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border-strong); }
+button.btn.secondary { background: var(--surface-2); color: var(--ink); border: 1px solid var(--border-2); }
 button.btn.danger { background: var(--danger); color: #fff; }
-button.btn.ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+button.btn.ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--border); }
 
 button.icon-btn {
-  background: var(--bg-card);
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  color: var(--text);
+  color: var(--ink);
   width: 40px; height: 40px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   cursor: pointer;
   display: grid; place-items: center;
   font-size: 18px;
@@ -167,21 +168,21 @@ button.icon-btn {
   gap: 10px;
 }
 .container-card {
-  background: var(--bg-card);
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
   position: relative;
   transition: border-color 0.15s, transform 0.05s;
 }
 .container-card:active { transform: scale(0.98); }
-.container-card:hover { border-color: var(--accent-dim); }
+.container-card:hover { border-color: #b89e00; }
 .container-card .photo {
   aspect-ratio: 4/3;
   background: #000;
   display: grid; place-items: center;
-  color: var(--text-faint);
+  color: var(--muted);
   font-size: 32px;
   background-size: cover;
   background-position: center;
@@ -190,7 +191,7 @@ button.icon-btn {
 .container-card .id {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: var(--accent);
+  color: var(--primary);
   letter-spacing: 0.1em;
   font-weight: 600;
 }
@@ -203,32 +204,32 @@ button.icon-btn {
 .container-card .meta {
   font-family: 'JetBrains Mono', monospace;
   font-size: 9px;
-  color: var(--text-faint);
+  color: var(--muted);
   letter-spacing: 0.05em;
 }
-.container-card .meta.warn { color: var(--warn); }
+.container-card .meta.warn { color: var(--amber); }
 
 .add-card {
   background: transparent;
-  border: 2px dashed var(--border-strong);
-  border-radius: 6px;
+  border: 2px dashed var(--border-2);
+  border-radius: var(--radius-lg);
   display: grid; place-items: center;
   aspect-ratio: 1;
-  color: var(--text-faint);
+  color: var(--muted);
   cursor: pointer;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   letter-spacing: 0.1em;
   transition: all 0.15s;
 }
-.add-card:hover { border-color: var(--accent); color: var(--accent); }
+.add-card:hover { border-color: var(--primary); color: var(--primary); }
 .add-card .plus { font-size: 32px; line-height: 1; margin-bottom: 4px; font-weight: 300; }
 
 /* ============ EMPTY STATE ============ */
 .empty {
   text-align: center;
   padding: 60px 20px;
-  color: var(--text-faint);
+  color: var(--muted);
 }
 .empty .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
 .empty .text { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.1em; }
@@ -244,12 +245,12 @@ button.icon-btn {
 }
 .modal-bg.show { display: flex; }
 .modal {
-  background: var(--bg-elev);
+  background: var(--surface);
   width: 100%;
   max-height: 92vh;
   overflow-y: auto;
-  border-top: 2px solid var(--accent);
-  border-radius: 12px 12px 0 0;
+  border-top: 2px solid var(--primary);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   padding: 16px;
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
   animation: slideUp 0.2s ease;
@@ -267,10 +268,10 @@ button.icon-btn {
   font-size: 12px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--ink-2);
 }
 .modal-close {
-  background: none; border: none; color: var(--text-dim);
+  background: none; border: none; color: var(--ink-2);
   font-size: 24px; cursor: pointer; line-height: 1;
 }
 
@@ -281,30 +282,30 @@ button.icon-btn {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   letter-spacing: 0.15em;
-  color: var(--text-faint);
+  color: var(--muted);
   text-transform: uppercase;
   margin-bottom: 6px;
 }
 .field input, .field select, .field textarea {
   width: 100%;
-  background: var(--bg-card);
-  border: 1px solid var(--border-strong);
-  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  color: var(--ink);
   padding: 12px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 15px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   outline: none;
 }
-.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--primary); }
 .field textarea { resize: vertical; min-height: 80px; }
 
 .photo-input {
   width: 100%;
   aspect-ratio: 4/3;
-  border: 2px dashed var(--border-strong);
-  border-radius: 6px;
-  background: var(--bg-card);
+  border: 2px dashed var(--border-2);
+  border-radius: var(--radius);
+  background: var(--surface-2);
   display: grid; place-items: center;
   cursor: pointer;
   background-size: cover;
@@ -314,7 +315,7 @@ button.icon-btn {
 }
 .photo-input.has-photo { border-style: solid; }
 .photo-input .placeholder {
-  text-align: center; color: var(--text-faint);
+  text-align: center; color: var(--muted);
   font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em;
 }
 .photo-input .placeholder .icon { font-size: 32px; margin-bottom: 4px; }
@@ -326,24 +327,24 @@ button.icon-btn {
   width: 100%;
   aspect-ratio: 1;
   background: #000;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-2);
 }
 #scannerVideo, #scannerCanvas { width: 100%; height: 100%; object-fit: cover; }
 #scannerCanvas { display: none; }
 .scanner-overlay {
   position: absolute; inset: 0;
   pointer-events: none;
-  background: 
+  background:
     linear-gradient(transparent 30%, transparent 70%, transparent 100%);
 }
 .scanner-overlay::before {
   content: '';
   position: absolute;
   top: 25%; left: 25%; right: 25%; bottom: 25%;
-  border: 2px solid var(--accent);
-  border-radius: 8px;
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-lg);
   box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
 }
 .scanner-status {
@@ -351,16 +352,16 @@ button.icon-btn {
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   letter-spacing: 0.1em;
-  color: var(--text-dim);
+  color: var(--ink-2);
   margin-top: 12px;
   text-transform: uppercase;
 }
 
 /* ============ SUCHE ============ */
 .search-result {
-  background: var(--bg-card);
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 12px;
   margin-bottom: 8px;
   display: flex;
@@ -368,11 +369,11 @@ button.icon-btn {
   cursor: pointer;
   transition: border-color 0.15s;
 }
-.search-result:hover { border-color: var(--accent-dim); }
+.search-result:hover { border-color: #b89e00; }
 .search-result .thumb {
   width: 60px; height: 60px;
   background: #000;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
   background-size: cover;
   background-position: center;
@@ -382,14 +383,14 @@ button.icon-btn {
 .search-result .location {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  color: var(--accent);
+  color: var(--primary);
   margin-top: 4px;
   letter-spacing: 0.05em;
 }
-.search-result .container-name { font-size: 12px; color: var(--text-dim); }
+.search-result .container-name { font-size: 12px; color: var(--ink-2); }
 
 mark {
-  background: var(--accent);
+  background: var(--primary);
   color: #000;
   padding: 0 2px;
   border-radius: 2px;
@@ -397,9 +398,9 @@ mark {
 
 /* ============ ITEMS LIST ============ */
 .item-row {
-  background: var(--bg-card);
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 10px;
   margin-bottom: 8px;
   display: flex;
@@ -409,19 +410,19 @@ mark {
 .item-row .thumb {
   width: 48px; height: 48px;
   background: #000;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
   background-size: cover;
   background-position: center;
   display: grid; place-items: center;
-  color: var(--text-faint);
+  color: var(--muted);
 }
 .item-row .body { flex: 1; min-width: 0; }
 .item-row .name { font-weight: 600; font-size: 14px; }
 .item-row .sub {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: var(--text-faint);
+  color: var(--muted);
   letter-spacing: 0.05em;
 }
 .item-row.archived { opacity: 0.5; }
@@ -434,31 +435,31 @@ mark {
   text-transform: uppercase;
   padding: 2px 6px;
   border-radius: 3px;
-  background: var(--border-strong);
-  color: var(--text-dim);
+  background: var(--muted-3);
+  color: var(--ink-2);
   margin-right: 4px;
 }
 
 /* ============ AUSMIST ============ */
 .dust-card {
-  background: var(--bg-card);
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 14px;
   margin-bottom: 10px;
   position: relative;
   overflow: hidden;
 }
-.dust-card.warn { border-left: 3px solid var(--warn); }
+.dust-card.warn { border-left: 3px solid var(--amber); }
 .dust-card.danger { border-left: 3px solid var(--danger); }
 .dust-card .age {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   letter-spacing: 0.1em;
-  color: var(--text-faint);
+  color: var(--muted);
   text-transform: uppercase;
 }
-.dust-card .age.warn { color: var(--warn); }
+.dust-card .age.warn { color: var(--amber); }
 .dust-card .age.danger { color: var(--danger); }
 .dust-card .item { font-weight: 600; font-size: 16px; margin: 4px 0; }
 .dust-card .actions {
@@ -467,18 +468,18 @@ mark {
 .dust-card .actions button {
   flex: 1;
   background: transparent;
-  border: 1px solid var(--border-strong);
-  color: var(--text-dim);
+  border: 1px solid var(--border-2);
+  color: var(--ink-2);
   padding: 8px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 .dust-card .actions button.keep:hover { border-color: var(--success); color: var(--success); }
-.dust-card .actions button.sell:hover { border-color: var(--accent); color: var(--accent); }
+.dust-card .actions button.sell:hover { border-color: var(--primary); color: var(--primary); }
 .dust-card .actions button.trash:hover { border-color: var(--danger); color: var(--danger); }
 
 /* ============ DETAIL VIEW ============ */
@@ -486,13 +487,13 @@ mark {
   width: 100%;
   aspect-ratio: 4/3;
   background: #000;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background-size: cover;
   background-position: center;
   margin-bottom: 12px;
   border: 1px solid var(--border);
   display: grid; place-items: center;
-  color: var(--text-faint);
+  color: var(--muted);
   font-size: 48px;
 }
 
@@ -507,7 +508,7 @@ mark {
 
 .section-divider {
   height: 1px;
-  background: var(--border);
+  background: var(--border-2);
   margin: 16px 0;
 }
 
@@ -515,10 +516,10 @@ mark {
 #toast {
   position: fixed;
   bottom: 90px; left: 16px; right: 16px;
-  background: var(--accent);
-  color: #000;
+  background: var(--primary);
+  color: var(--primary-ink);
   padding: 12px 16px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   font-weight: 600;
@@ -537,32 +538,32 @@ mark {
   justify-content: space-between;
   align-items: center;
   padding: 14px 12px;
-  background: var(--bg-card);
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   margin-bottom: 8px;
 }
 .settings-row .label { font-size: 14px; }
-.settings-row .val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); }
+.settings-row .val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-2); }
 
 .search-input {
   width: 100%;
-  background: var(--bg-card);
-  border: 1px solid var(--border-strong);
-  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  color: var(--ink);
   padding: 14px 16px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 16px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   outline: none;
   margin-bottom: 16px;
 }
-.search-input:focus { border-color: var(--accent); }
+.search-input:focus { border-color: var(--primary); }
 
 .ai-suggestion {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.02));
-  border: 1px solid var(--accent-dim);
-  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(255,214,10,0.08), rgba(255,214,10,0.02));
+  border: 1px solid #b89e00;
+  border-radius: var(--radius);
   padding: 12px;
   margin: 12px 0;
   font-size: 13px;
@@ -572,7 +573,7 @@ mark {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   letter-spacing: 0.15em;
-  color: var(--accent);
+  color: var(--primary);
   text-transform: uppercase;
   margin-bottom: 6px;
   font-weight: 600;
@@ -580,8 +581,8 @@ mark {
 
 .spinner {
   width: 16px; height: 16px;
-  border: 2px solid var(--border-strong);
-  border-top-color: var(--accent);
+  border: 2px solid var(--border-2);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   display: inline-block;
@@ -596,9 +597,14 @@ mark {
 
 <header>
   <div class="logo-row">
-    <div class="logo">G</div>
+    <div class="logo">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <path d="M18 2L32 10V26L18 34L4 26V10L18 2Z" fill="#FFD60A"/>
+        <text x="18" y="23" font-size="14" font-weight="800" text-anchor="middle" font-family="JetBrains Mono,monospace" fill="#0A0A0A">F</text>
+      </svg>
+    </div>
     <div>
-      <h1>Garage // Inventar</h1>
+      <h1>Findly</h1>
       <div class="tag" id="headerStats">– Behälter // – Items</div>
     </div>
   </div>
@@ -640,7 +646,7 @@ mark {
     <span>Ausmisten</span>
     <span id="dustCount" class="count">0</span>
   </div>
-  <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px;line-height:1.5;">
+  <div style="font-size:13px;color:var(--ink-2);margin-bottom:14px;line-height:1.5;">
     Items, die du seit über 6 Monaten nicht mehr verwendet hast. Behalten, Verkaufen oder Wegwerfen.
   </div>
   <div id="dustList"></div>
@@ -653,7 +659,7 @@ mark {
   <div class="field">
     <label>Claude API-Schlüssel (für KI-Erkennung)</label>
     <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="new-password">
-    <div style="font-size:11px;color:var(--text-faint);margin-top:6px;line-height:1.4;">
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4;">
       Wird nur lokal im Browser gespeichert. Nötig für KI-Werkzeugerkennung und Organisations-Tipps.
     </div>
     <div id="apiKeyStatus" style="display:none;font-size:11px;color:var(--success);margin-top:6px;">✓ API-Key gespeichert</div>
@@ -663,7 +669,7 @@ mark {
   <div class="section-divider"></div>
 
   <div class="view-title"><span>QR-Codes Drucken</span></div>
-  <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px;line-height:1.5;">
+  <div style="font-size:13px;color:var(--ink-2);margin-bottom:14px;line-height:1.5;">
     Druckt einen Bogen mit allen Behälter-QR-Codes. Auf Etikettenpapier (z.B. Avery L7159) ausdrucken oder ausschneiden.
   </div>
   <button class="btn" onclick="printQRCodes()">QR-Codes als Bogen öffnen</button>
@@ -758,9 +764,9 @@ mark {
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:0.1em;" id="detailId"></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--primary);letter-spacing:0.1em;" id="detailId"></div>
         <div style="font-size:18px;font-weight:600;margin-top:2px;" id="detailName"></div>
-        <div style="font-size:12px;color:var(--text-dim);margin-top:2px;" id="detailLocation"></div>
+        <div style="font-size:12px;color:var(--ink-2);margin-top:2px;" id="detailLocation"></div>
       </div>
       <button class="icon-btn" onclick="editCurrentContainer()">✎</button>
     </div>
@@ -797,7 +803,7 @@ mark {
     <label class="photo-input" id="itemPhotoInput">
       <input type="file" accept="image/*" capture="environment" id="itemPhotoFile">
       <div class="placeholder">
-        <div class="icon">📷</div>
+        <div class="icon">▲</div>
         <div>FOTO MACHEN</div>
       </div>
     </label>
@@ -1438,7 +1444,7 @@ async function renderSearch() {
       <div class="info">
         <div class="item-name">${highlight(escapeHtml(it.name), q)}</div>
         <div class="container-name">${escapeHtml(c.name)}</div>
-        <div class="location">📍 ${c.code}${c.location ? ' · ' + escapeHtml(c.location) : ''}</div>
+        <div class="location">◈ ${c.code}${c.location ? ' · ' + escapeHtml(c.location) : ''}</div>
       </div>
     `;
     out.appendChild(div);
@@ -1484,7 +1490,7 @@ async function renderDust() {
         <div style="flex:1;">
           <div class="age ${cls}">${formatAge(it.age).toUpperCase()}</div>
           <div class="item">${escapeHtml(it.name)}</div>
-          <div style="font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;">${c?.code} · ${escapeHtml(c?.name||'')}</div>
+          <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;">${c?.code} · ${escapeHtml(c?.name||'')}</div>
         </div>
       </div>
       <div class="actions">
@@ -1787,7 +1793,7 @@ function closeAllModals() {
   if (synced) {
     updateStats();
     renderOverview();
-    toast('☁ Daten synchronisiert');
+    toast('Daten synchronisiert');
   }
 
   if ('serviceWorker' in navigator) {
