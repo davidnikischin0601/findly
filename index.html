@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0f">
+<title>Garage Inventar</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f59e0b'/><text x='50' y='68' font-size='60' text-anchor='middle' font-family='monospace' font-weight='bold'>G</text></svg>">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #0a0a0a;
+  --bg-elev: #161616;
+  --bg-card: #1c1c1c;
+  --border: #2a2a2a;
+  --border-strong: #3a3a3a;
+  --text: #f5f5f5;
+  --text-dim: #a0a0a0;
+  --text-faint: #606060;
+  --accent: #f59e0b;
+  --accent-dim: #b27407;
+  --danger: #ef4444;
+  --success: #10b981;
+  --warn: #fbbf24;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  min-height: 100vh;
+  overscroll-behavior: none;
+}
+
+body {
+  padding-bottom: 80px;
+  background-image: 
+    radial-gradient(circle at 20% 0%, rgba(245, 158, 11, 0.04) 0%, transparent 40%),
+    linear-gradient(180deg, var(--bg) 0%, #050505 100%);
+}
+
+/* ============ HEADER ============ */
+header {
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.logo-row { display: flex; align-items: center; gap: 12px; }
+.logo {
+  width: 36px; height: 36px;
+  background: var(--accent);
+  display: grid; place-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 22px;
+  color: #000;
+  border-radius: 4px;
+}
+h1 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-faint);
+  letter-spacing: 0.1em;
+}
+
+/* ============ TABS / NAV ============ */
+nav.tabs {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--bg-elev);
+  border-top: 1px solid var(--border-strong);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+nav.tabs button {
+  background: none; border: none; color: var(--text-faint);
+  padding: 12px 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  transition: color 0.15s;
+}
+nav.tabs button.active { color: var(--accent); }
+nav.tabs button .icon { font-size: 20px; }
+
+/* ============ VIEWS ============ */
+.view { display: none; padding: 16px; animation: fadeIn 0.2s ease; }
+.view.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.view-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.view-title .count { color: var(--accent); }
+
+/* ============ BUTTONS ============ */
+button.btn {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  padding: 14px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 4px;
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: transform 0.05s, background 0.15s;
+}
+button.btn:active { transform: scale(0.98); }
+button.btn.secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border-strong); }
+button.btn.danger { background: var(--danger); color: #fff; }
+button.btn.ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+
+button.icon-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 40px; height: 40px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: grid; place-items: center;
+  font-size: 18px;
+}
+
+/* ============ BEHÄLTER GRID ============ */
+.container-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.container-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s, transform 0.05s;
+}
+.container-card:active { transform: scale(0.98); }
+.container-card:hover { border-color: var(--accent-dim); }
+.container-card .photo {
+  aspect-ratio: 4/3;
+  background: #000;
+  display: grid; place-items: center;
+  color: var(--text-faint);
+  font-size: 32px;
+  background-size: cover;
+  background-position: center;
+}
+.container-card .info { padding: 10px; }
+.container-card .id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+.container-card .name {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 2px 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.container-card .meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-faint);
+  letter-spacing: 0.05em;
+}
+.container-card .meta.warn { color: var(--warn); }
+
+.add-card {
+  background: transparent;
+  border: 2px dashed var(--border-strong);
+  border-radius: 6px;
+  display: grid; place-items: center;
+  aspect-ratio: 1;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  transition: all 0.15s;
+}
+.add-card:hover { border-color: var(--accent); color: var(--accent); }
+.add-card .plus { font-size: 32px; line-height: 1; margin-bottom: 4px; font-weight: 300; }
+
+/* ============ EMPTY STATE ============ */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-faint);
+}
+.empty .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+.empty .text { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.1em; }
+
+/* ============ MODAL ============ */
+.modal-bg {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 200;
+  display: none;
+  align-items: flex-end;
+  backdrop-filter: blur(4px);
+}
+.modal-bg.show { display: flex; }
+.modal {
+  background: var(--bg-elev);
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  border-top: 2px solid var(--accent);
+  border-radius: 12px 12px 0 0;
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  animation: slideUp 0.2s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: none; } }
+
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.modal-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 24px; cursor: pointer; line-height: 1;
+}
+
+/* ============ FORM ============ */
+.field { margin-bottom: 14px; }
+.field label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.field input, .field select, .field textarea {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  padding: 12px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  border-radius: 4px;
+  outline: none;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+.field textarea { resize: vertical; min-height: 80px; }
+
+.photo-input {
+  width: 100%;
+  aspect-ratio: 4/3;
+  border: 2px dashed var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg-card);
+  display: grid; place-items: center;
+  cursor: pointer;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+}
+.photo-input.has-photo { border-style: solid; }
+.photo-input .placeholder {
+  text-align: center; color: var(--text-faint);
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em;
+}
+.photo-input .placeholder .icon { font-size: 32px; margin-bottom: 4px; }
+.photo-input input[type=file] { display: none; }
+
+/* ============ SCANNER ============ */
+.scanner-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+}
+#scannerVideo, #scannerCanvas { width: 100%; height: 100%; object-fit: cover; }
+#scannerCanvas { display: none; }
+.scanner-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: 
+    linear-gradient(transparent 30%, transparent 70%, transparent 100%);
+}
+.scanner-overlay::before {
+  content: '';
+  position: absolute;
+  top: 25%; left: 25%; right: 25%; bottom: 25%;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+}
+.scanner-status {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-top: 12px;
+  text-transform: uppercase;
+}
+
+/* ============ SUCHE ============ */
+.search-result {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.search-result:hover { border-color: var(--accent-dim); }
+.search-result .thumb {
+  width: 60px; height: 60px;
+  background: #000;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
+}
+.search-result .info { flex: 1; min-width: 0; }
+.search-result .item-name { font-weight: 600; font-size: 15px; }
+.search-result .location {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+}
+.search-result .container-name { font-size: 12px; color: var(--text-dim); }
+
+mark {
+  background: var(--accent);
+  color: #000;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* ============ ITEMS LIST ============ */
+.item-row {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.item-row .thumb {
+  width: 48px; height: 48px;
+  background: #000;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
+  display: grid; place-items: center;
+  color: var(--text-faint);
+}
+.item-row .body { flex: 1; min-width: 0; }
+.item-row .name { font-weight: 600; font-size: 14px; }
+.item-row .sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-faint);
+  letter-spacing: 0.05em;
+}
+.item-row.archived { opacity: 0.5; }
+
+.cat-pill {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--border-strong);
+  color: var(--text-dim);
+  margin-right: 4px;
+}
+
+/* ============ AUSMIST ============ */
+.dust-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.dust-card.warn { border-left: 3px solid var(--warn); }
+.dust-card.danger { border-left: 3px solid var(--danger); }
+.dust-card .age {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+.dust-card .age.warn { color: var(--warn); }
+.dust-card .age.danger { color: var(--danger); }
+.dust-card .item { font-weight: 600; font-size: 16px; margin: 4px 0; }
+.dust-card .actions {
+  display: flex; gap: 6px; margin-top: 10px;
+}
+.dust-card .actions button {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-dim);
+  padding: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.dust-card .actions button.keep:hover { border-color: var(--success); color: var(--success); }
+.dust-card .actions button.sell:hover { border-color: var(--accent); color: var(--accent); }
+.dust-card .actions button.trash:hover { border-color: var(--danger); color: var(--danger); }
+
+/* ============ DETAIL VIEW ============ */
+.detail-photo {
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: #000;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  display: grid; place-items: center;
+  color: var(--text-faint);
+  font-size: 48px;
+}
+
+.qr-display {
+  background: #fff;
+  padding: 16px;
+  border-radius: 6px;
+  display: grid; place-items: center;
+  margin: 12px 0;
+}
+.qr-display canvas, .qr-display img { display: block; }
+
+.section-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
+
+/* ============ TOAST ============ */
+#toast {
+  position: fixed;
+  bottom: 90px; left: 16px; right: 16px;
+  background: var(--accent);
+  color: #000;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-align: center;
+  z-index: 300;
+  transform: translateY(150%);
+  transition: transform 0.25s ease;
+}
+#toast.show { transform: translateY(0); }
+#toast.error { background: var(--danger); color: #fff; }
+
+/* ============ SETTINGS ROW ============ */
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.settings-row .label { font-size: 14px; }
+.settings-row .val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); }
+
+.search-input {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  padding: 14px 16px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  border-radius: 6px;
+  outline: none;
+  margin-bottom: 16px;
+}
+.search-input:focus { border-color: var(--accent); }
+
+.ai-suggestion {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.02));
+  border: 1px solid var(--accent-dim);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 12px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.ai-suggestion .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.btn-row { display: flex; gap: 8px; }
+.btn-row .btn { flex: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-row">
+    <div class="logo">G</div>
+    <div>
+      <h1>Garage // Inventar</h1>
+      <div class="tag" id="headerStats">– Behälter // – Items</div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ ÜBERSICHT ============ -->
+<div class="view active" id="view-overview">
+  <div class="view-title">
+    <span>Behälter <span class="count" id="containerCount">0</span></span>
+    <span id="lastSync"></span>
+  </div>
+  <div id="containerGrid" class="container-grid"></div>
+</div>
+
+<!-- ============ SCANNEN ============ -->
+<div class="view" id="view-scan">
+  <div class="view-title"><span>QR-Code Scannen</span></div>
+  <div class="scanner-frame">
+    <video id="scannerVideo" autoplay playsinline muted></video>
+    <canvas id="scannerCanvas"></canvas>
+    <div class="scanner-overlay"></div>
+  </div>
+  <div class="scanner-status" id="scannerStatus">QR-CODE INS BILD HALTEN</div>
+  <div style="margin-top:16px;">
+    <button class="btn secondary" onclick="stopScanner(); switchTab('settings')">QR-Codes drucken</button>
+  </div>
+</div>
+
+<!-- ============ SUCHE ============ -->
+<div class="view" id="view-search">
+  <div class="view-title"><span>Suchen</span></div>
+  <input type="text" class="search-input" id="searchInput" placeholder="Was suchst du? z.B. 10er Maulschlüssel" autocomplete="off">
+  <div id="searchResults"></div>
+</div>
+
+<!-- ============ AUSMISTEN ============ -->
+<div class="view" id="view-dust">
+  <div class="view-title">
+    <span>Ausmisten</span>
+    <span id="dustCount" class="count">0</span>
+  </div>
+  <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px;line-height:1.5;">
+    Items, die du seit über 6 Monaten nicht mehr verwendet hast. Behalten, Verkaufen oder Wegwerfen.
+  </div>
+  <div id="dustList"></div>
+</div>
+
+<!-- ============ EINSTELLUNGEN ============ -->
+<div class="view" id="view-settings">
+  <div class="view-title"><span>Einstellungen</span></div>
+
+  <div class="field">
+    <label>Claude API-Schlüssel (für KI-Erkennung)</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+    <div style="font-size:11px;color:var(--text-faint);margin-top:6px;line-height:1.4;">
+      Wird nur lokal im Browser gespeichert. Nötig für KI-Werkzeugerkennung und Organisations-Tipps.
+    </div>
+  </div>
+  <button class="btn secondary" onclick="saveApiKey()">Speichern</button>
+
+  <div class="section-divider"></div>
+
+  <div class="view-title"><span>QR-Codes Drucken</span></div>
+  <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px;line-height:1.5;">
+    Druckt einen Bogen mit allen Behälter-QR-Codes. Auf Etikettenpapier (z.B. Avery L7159) ausdrucken oder ausschneiden.
+  </div>
+  <button class="btn" onclick="printQRCodes()">QR-Codes als Bogen öffnen</button>
+
+  <div class="section-divider"></div>
+
+  <div class="view-title"><span>Daten</span></div>
+  <div class="settings-row">
+    <span class="label">Behälter</span>
+    <span class="val" id="setStatContainers">0</span>
+  </div>
+  <div class="settings-row">
+    <span class="label">Items aktiv</span>
+    <span class="val" id="setStatItems">0</span>
+  </div>
+  <div class="settings-row">
+    <span class="label">Im Papierkorb</span>
+    <span class="val" id="setStatTrash">0</span>
+  </div>
+  <div class="btn-row" style="margin-top:12px;">
+    <button class="btn secondary" onclick="exportData()">Backup exportieren</button>
+    <button class="btn secondary" onclick="document.getElementById('importFile').click()">Backup laden</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
+  </div>
+  <button class="btn ghost" style="margin-top:8px;" onclick="resetAll()">Alle Daten löschen</button>
+</div>
+
+<!-- ============ NAV TABS ============ -->
+<nav class="tabs">
+  <button class="active" data-tab="overview" onclick="switchTab('overview')">
+    <span class="icon">▦</span><span>Übersicht</span>
+  </button>
+  <button data-tab="scan" onclick="switchTab('scan')">
+    <span class="icon">⌖</span><span>Scan</span>
+  </button>
+  <button data-tab="search" onclick="switchTab('search')">
+    <span class="icon">⌕</span><span>Suchen</span>
+  </button>
+  <button data-tab="dust" onclick="switchTab('dust')">
+    <span class="icon">⊘</span><span>Ausmist</span>
+  </button>
+</nav>
+
+<!-- floating settings button -->
+<button class="icon-btn" style="position:fixed;top:18px;right:16px;z-index:60;" onclick="switchTab('settings')">⚙</button>
+
+<!-- ============ MODAL: BEHÄLTER ============ -->
+<div class="modal-bg" id="modalContainer">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="containerModalTitle">Neuer Behälter</span>
+      <button class="modal-close" onclick="closeModal('modalContainer')">×</button>
+    </div>
+
+    <label class="photo-input" id="containerPhotoInput">
+      <input type="file" accept="image/*" capture="environment" id="containerPhotoFile">
+      <div class="placeholder">
+        <div class="icon">⌂</div>
+        <div>FOTO VOM SOLLZUSTAND</div>
+      </div>
+    </label>
+
+    <div class="field" style="margin-top:14px;">
+      <label>ID (QR-Code)</label>
+      <input type="text" id="containerIdInput" placeholder="z.B. G-RG-01" maxlength="12">
+    </div>
+    <div class="field">
+      <label>Name</label>
+      <input type="text" id="containerNameInput" placeholder="z.B. Werkzeugkoffer Klein">
+    </div>
+    <div class="field">
+      <label>Standort (optional)</label>
+      <input type="text" id="containerLocationInput" placeholder="z.B. Regal links, oben">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="saveContainer()">Speichern</button>
+      <button class="btn ghost" id="deleteContainerBtn" onclick="deleteContainer()" style="display:none;">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: BEHÄLTER DETAIL ============ -->
+<div class="modal-bg" id="modalDetail">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="detailModalTitle">Behälter</span>
+      <button class="modal-close" onclick="closeModal('modalDetail')">×</button>
+    </div>
+
+    <div class="detail-photo" id="detailPhoto">⌂</div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:0.1em;" id="detailId"></div>
+        <div style="font-size:18px;font-weight:600;margin-top:2px;" id="detailName"></div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:2px;" id="detailLocation"></div>
+      </div>
+      <button class="icon-btn" onclick="editCurrentContainer()">✎</button>
+    </div>
+
+    <div class="ai-suggestion" id="aiSuggestion" style="display:none;"></div>
+    <button class="btn secondary" id="aiSuggestBtn" onclick="getOrganizationTip()" style="margin:10px 0;">
+      <span>KI: Organisations-Tipp holen</span>
+    </button>
+
+    <div class="section-divider"></div>
+
+    <div class="view-title">
+      <span>Items <span class="count" id="detailItemCount">0</span></span>
+    </div>
+    <div id="detailItems"></div>
+
+    <button class="btn" style="margin-top:12px;" onclick="openItemModal()">+ Item hinzufügen</button>
+
+    <div style="margin-top:16px;">
+      <div class="view-title"><span>QR-Code dieses Behälters</span></div>
+      <div class="qr-display" id="detailQR"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: ITEM ============ -->
+<div class="modal-bg" id="modalItem">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="itemModalTitle">Neues Item</span>
+      <button class="modal-close" onclick="closeModal('modalItem')">×</button>
+    </div>
+
+    <label class="photo-input" id="itemPhotoInput">
+      <input type="file" accept="image/*" capture="environment" id="itemPhotoFile">
+      <div class="placeholder">
+        <div class="icon">📷</div>
+        <div>FOTO MACHEN</div>
+      </div>
+    </label>
+
+    <button class="btn secondary" id="aiDetectBtn" onclick="detectItem()" style="margin-top:10px;display:none;">
+      <span>KI: Was ist das?</span>
+    </button>
+
+    <div class="field" style="margin-top:14px;">
+      <label>Name</label>
+      <input type="text" id="itemNameInput" placeholder="z.B. Maulschlüssel 10mm">
+    </div>
+    <div class="field">
+      <label>Kategorie</label>
+      <select id="itemCategoryInput">
+        <option value="werkzeug">Werkzeug</option>
+        <option value="kfz">KFZ</option>
+        <option value="garten">Garten</option>
+        <option value="sport">Sport / Fahrrad</option>
+        <option value="saison">Saison (Deko, Winter)</option>
+        <option value="material">Baumaterial</option>
+        <option value="elektro">Elektro / Kabel</option>
+        <option value="sonstiges">Sonstiges</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Notiz (optional)</label>
+      <textarea id="itemNoteInput" placeholder="z.B. Set 8-19mm, geliehen von Vater"></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="saveItem()">Speichern</button>
+      <button class="btn ghost" id="deleteItemBtn" onclick="deleteItem()" style="display:none;">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+//   STATE & PERSISTENCE (IndexedDB für Fotos, localStorage für Rest)
+// ============================================================
+
+let DB = null;
+let state = {
+  containers: [],
+  items: [],
+  apiKey: ''
+};
+
+let editingContainer = null;
+let editingItem = null;
+let currentContainer = null;
+let scannerStream = null;
+let scannerActive = false;
+
+// ---- IndexedDB für Bilder ----
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('garage_db', 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('photos')) {
+        db.createObjectStore('photos');
+      }
+    };
+    req.onsuccess = () => { DB = req.result; resolve(DB); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function savePhoto(key, dataUrl) {
+  return new Promise((resolve, reject) => {
+    const tx = DB.transaction('photos', 'readwrite');
+    tx.objectStore('photos').put(dataUrl, key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function loadPhoto(key) {
+  return new Promise((resolve) => {
+    const tx = DB.transaction('photos', 'readonly');
+    const req = tx.objectStore('photos').get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => resolve(null);
+  });
+}
+
+function deletePhoto(key) {
+  return new Promise((resolve) => {
+    const tx = DB.transaction('photos', 'readwrite');
+    tx.objectStore('photos').delete(key);
+    tx.oncomplete = resolve;
+    tx.onerror = resolve;
+  });
+}
+
+function loadState() {
+  const saved = localStorage.getItem('garage_state');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      state.containers = parsed.containers || [];
+      state.items = parsed.items || [];
+      state.apiKey = parsed.apiKey || '';
+    } catch (e) { console.error(e); }
+  }
+}
+
+function saveState() {
+  localStorage.setItem('garage_state', JSON.stringify(state));
+  updateStats();
+}
+
+// ============================================================
+//   UTIL
+// ============================================================
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function toast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', isError);
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function daysSince(ts) {
+  if (!ts) return null;
+  return Math.floor((Date.now() - ts) / 86400000);
+}
+
+function formatAge(days) {
+  if (days === null) return 'nie';
+  if (days === 0) return 'heute';
+  if (days === 1) return 'gestern';
+  if (days < 30) return `vor ${days} Tagen`;
+  if (days < 365) return `vor ${Math.floor(days/30)} Mon.`;
+  return `vor ${Math.floor(days/365)} Jahren`;
+}
+
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 1200;
+        let w = img.width, h = img.height;
+        if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
+        else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ============================================================
+//   NAVIGATION
+// ============================================================
+
+function switchTab(tab) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + tab).classList.add('active');
+  const navBtn = document.querySelector(`nav.tabs button[data-tab="${tab}"]`);
+  if (navBtn) navBtn.classList.add('active');
+
+  if (tab === 'scan') startScanner();
+  else stopScanner();
+
+  if (tab === 'overview') renderOverview();
+  if (tab === 'dust') renderDust();
+  if (tab === 'search') document.getElementById('searchInput').focus();
+}
+
+// ============================================================
+//   ÜBERSICHT
+// ============================================================
+
+async function renderOverview() {
+  const grid = document.getElementById('containerGrid');
+  grid.innerHTML = '';
+
+  for (const c of state.containers) {
+    const card = document.createElement('div');
+    card.className = 'container-card';
+    card.onclick = () => openContainerDetail(c.id);
+
+    const itemCount = state.items.filter(i => i.containerId === c.id && i.status === 'active').length;
+    const days = daysSince(c.lastAccessed);
+    const isWarn = days !== null && days > 180;
+
+    const photo = c.photoKey ? await loadPhoto(c.photoKey) : null;
+
+    card.innerHTML = `
+      <div class="photo" ${photo ? `style="background-image:url(${photo})"` : ''}>${photo ? '' : '⌂'}</div>
+      <div class="info">
+        <div class="id">${c.code}</div>
+        <div class="name">${escapeHtml(c.name)}</div>
+        <div class="meta ${isWarn ? 'warn' : ''}">${itemCount} Items · ${formatAge(days)}</div>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+
+  // Add card
+  const addCard = document.createElement('div');
+  addCard.className = 'add-card';
+  addCard.onclick = () => openContainerModal();
+  addCard.innerHTML = `<div><div class="plus">+</div><div>NEUER BEHÄLTER</div></div>`;
+  grid.appendChild(addCard);
+
+  document.getElementById('containerCount').textContent = state.containers.length;
+  if (state.containers.length === 0) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;"><div class="icon">▦</div><div class="text">NOCH KEINE BEHÄLTER</div><div style="margin-top:16px"><button class="btn" onclick="openContainerModal()">Ersten Behälter anlegen</button></div></div>`;
+  }
+}
+
+function escapeHtml(s) { return (s||'').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ============================================================
+//   BEHÄLTER MODAL
+// ============================================================
+
+function openContainerModal(id = null) {
+  editingContainer = id;
+  const c = id ? state.containers.find(x => x.id === id) : null;
+
+  document.getElementById('containerModalTitle').textContent = c ? 'Behälter bearbeiten' : 'Neuer Behälter';
+  document.getElementById('containerIdInput').value = c ? c.code : suggestNextCode();
+  document.getElementById('containerNameInput').value = c ? c.name : '';
+  document.getElementById('containerLocationInput').value = c ? (c.location || '') : '';
+  document.getElementById('deleteContainerBtn').style.display = c ? 'flex' : 'none';
+
+  const photoInput = document.getElementById('containerPhotoInput');
+  photoInput.style.backgroundImage = '';
+  photoInput.classList.remove('has-photo');
+  photoInput.querySelector('.placeholder').style.display = 'block';
+
+  if (c && c.photoKey) {
+    loadPhoto(c.photoKey).then(p => {
+      if (p) {
+        photoInput.style.backgroundImage = `url(${p})`;
+        photoInput.classList.add('has-photo');
+        photoInput.querySelector('.placeholder').style.display = 'none';
+        photoInput.dataset.photoData = p;
+      }
+    });
+  } else {
+    delete photoInput.dataset.photoData;
+  }
+
+  document.getElementById('modalContainer').classList.add('show');
+}
+
+function suggestNextCode() {
+  const existing = state.containers.map(c => c.code);
+  for (let i = 1; i < 100; i++) {
+    const code = `G-${i.toString().padStart(2, '0')}`;
+    if (!existing.includes(code)) return code;
+  }
+  return 'G-XX';
+}
+
+document.getElementById('containerPhotoFile').addEventListener('change', async (e) => {
+  if (!e.target.files[0]) return;
+  const data = await compressImage(e.target.files[0]);
+  const input = document.getElementById('containerPhotoInput');
+  input.style.backgroundImage = `url(${data})`;
+  input.classList.add('has-photo');
+  input.querySelector('.placeholder').style.display = 'none';
+  input.dataset.photoData = data;
+});
+
+async function saveContainer() {
+  const code = document.getElementById('containerIdInput').value.trim().toUpperCase();
+  const name = document.getElementById('containerNameInput').value.trim();
+  const location = document.getElementById('containerLocationInput').value.trim();
+  const photoData = document.getElementById('containerPhotoInput').dataset.photoData;
+
+  if (!code || !name) { toast('ID und Name sind nötig', true); return; }
+
+  // Check unique
+  const conflict = state.containers.find(c => c.code === code && c.id !== editingContainer);
+  if (conflict) { toast('ID bereits vergeben', true); return; }
+
+  if (editingContainer) {
+    const c = state.containers.find(x => x.id === editingContainer);
+    c.code = code; c.name = name; c.location = location;
+    if (photoData) {
+      const photoKey = c.photoKey || `c_${c.id}`;
+      await savePhoto(photoKey, photoData);
+      c.photoKey = photoKey;
+    }
+  } else {
+    const id = uid();
+    const photoKey = photoData ? `c_${id}` : null;
+    if (photoData) await savePhoto(photoKey, photoData);
+    state.containers.push({ id, code, name, location, photoKey, created: Date.now(), lastAccessed: Date.now() });
+  }
+
+  saveState();
+  closeModal('modalContainer');
+  renderOverview();
+  toast(editingContainer ? 'Behälter aktualisiert' : 'Behälter angelegt');
+}
+
+async function deleteContainer() {
+  if (!editingContainer) return;
+  if (!confirm('Behälter und alle darin enthaltenen Items wirklich löschen?')) return;
+  const c = state.containers.find(x => x.id === editingContainer);
+  if (c?.photoKey) await deletePhoto(c.photoKey);
+  // delete items + their photos
+  const itemsToDelete = state.items.filter(i => i.containerId === editingContainer);
+  for (const it of itemsToDelete) if (it.photoKey) await deletePhoto(it.photoKey);
+  state.items = state.items.filter(i => i.containerId !== editingContainer);
+  state.containers = state.containers.filter(x => x.id !== editingContainer);
+  saveState();
+  closeModal('modalContainer');
+  renderOverview();
+  toast('Behälter gelöscht');
+}
+
+// ============================================================
+//   BEHÄLTER DETAIL
+// ============================================================
+
+async function openContainerDetail(id) {
+  const c = state.containers.find(x => x.id === id);
+  if (!c) return;
+  currentContainer = c;
+  c.lastAccessed = Date.now();
+  saveState();
+
+  document.getElementById('detailModalTitle').textContent = 'Behälter';
+  document.getElementById('detailId').textContent = c.code;
+  document.getElementById('detailName').textContent = c.name;
+  document.getElementById('detailLocation').textContent = c.location || '';
+  document.getElementById('aiSuggestion').style.display = 'none';
+
+  const photoEl = document.getElementById('detailPhoto');
+  photoEl.style.backgroundImage = '';
+  photoEl.textContent = '⌂';
+  if (c.photoKey) {
+    const p = await loadPhoto(c.photoKey);
+    if (p) { photoEl.style.backgroundImage = `url(${p})`; photoEl.textContent = ''; }
+  }
+
+  // QR
+  const qrContainer = document.getElementById('detailQR');
+  qrContainer.innerHTML = '';
+  new QRCode(qrContainer, { text: 'GARAGE://' + c.code, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M });
+
+  await renderDetailItems();
+
+  document.getElementById('modalDetail').classList.add('show');
+}
+
+async function renderDetailItems() {
+  const list = document.getElementById('detailItems');
+  list.innerHTML = '';
+  const items = state.items.filter(i => i.containerId === currentContainer.id && i.status === 'active');
+  document.getElementById('detailItemCount').textContent = items.length;
+
+  if (items.length === 0) {
+    list.innerHTML = `<div class="empty" style="padding:30px 0;"><div class="text">KEINE ITEMS</div></div>`;
+    return;
+  }
+
+  for (const it of items) {
+    const photo = it.photoKey ? await loadPhoto(it.photoKey) : null;
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.onclick = () => openItemModal(it.id);
+    row.innerHTML = `
+      <div class="thumb" ${photo ? `style="background-image:url(${photo})"` : ''}>${photo ? '' : '◎'}</div>
+      <div class="body">
+        <div class="name">${escapeHtml(it.name)}</div>
+        <div class="sub"><span class="cat-pill">${it.category}</span>${formatAge(daysSince(it.lastUsed || it.created))}</div>
+      </div>
+    `;
+    list.appendChild(row);
+  }
+}
+
+function editCurrentContainer() {
+  closeModal('modalDetail');
+  setTimeout(() => openContainerModal(currentContainer.id), 200);
+}
+
+// ============================================================
+//   ITEMS
+// ============================================================
+
+function openItemModal(id = null) {
+  editingItem = id;
+  const it = id ? state.items.find(x => x.id === id) : null;
+
+  document.getElementById('itemModalTitle').textContent = it ? 'Item bearbeiten' : 'Neues Item';
+  document.getElementById('itemNameInput').value = it ? it.name : '';
+  document.getElementById('itemCategoryInput').value = it ? it.category : 'werkzeug';
+  document.getElementById('itemNoteInput').value = it ? (it.note || '') : '';
+  document.getElementById('deleteItemBtn').style.display = it ? 'flex' : 'none';
+  document.getElementById('aiDetectBtn').style.display = 'none';
+
+  const photoInput = document.getElementById('itemPhotoInput');
+  photoInput.style.backgroundImage = '';
+  photoInput.classList.remove('has-photo');
+  photoInput.querySelector('.placeholder').style.display = 'block';
+  delete photoInput.dataset.photoData;
+
+  if (it && it.photoKey) {
+    loadPhoto(it.photoKey).then(p => {
+      if (p) {
+        photoInput.style.backgroundImage = `url(${p})`;
+        photoInput.classList.add('has-photo');
+        photoInput.querySelector('.placeholder').style.display = 'none';
+        photoInput.dataset.photoData = p;
+        document.getElementById('aiDetectBtn').style.display = 'flex';
+      }
+    });
+  }
+
+  document.getElementById('modalItem').classList.add('show');
+}
+
+document.getElementById('itemPhotoFile').addEventListener('change', async (e) => {
+  if (!e.target.files[0]) return;
+  const data = await compressImage(e.target.files[0]);
+  const input = document.getElementById('itemPhotoInput');
+  input.style.backgroundImage = `url(${data})`;
+  input.classList.add('has-photo');
+  input.querySelector('.placeholder').style.display = 'none';
+  input.dataset.photoData = data;
+  document.getElementById('aiDetectBtn').style.display = 'flex';
+});
+
+async function saveItem() {
+  const name = document.getElementById('itemNameInput').value.trim();
+  const category = document.getElementById('itemCategoryInput').value;
+  const note = document.getElementById('itemNoteInput').value.trim();
+  const photoData = document.getElementById('itemPhotoInput').dataset.photoData;
+
+  if (!name) { toast('Name ist nötig', true); return; }
+
+  if (editingItem) {
+    const it = state.items.find(x => x.id === editingItem);
+    it.name = name; it.category = category; it.note = note;
+    if (photoData) {
+      const photoKey = it.photoKey || `i_${it.id}`;
+      await savePhoto(photoKey, photoData);
+      it.photoKey = photoKey;
+    }
+  } else {
+    const id = uid();
+    const photoKey = photoData ? `i_${id}` : null;
+    if (photoData) await savePhoto(photoKey, photoData);
+    state.items.push({
+      id, containerId: currentContainer.id,
+      name, category, note,
+      photoKey, status: 'active',
+      created: Date.now(), lastUsed: Date.now()
+    });
+  }
+
+  saveState();
+  closeModal('modalItem');
+  await renderDetailItems();
+  toast(editingItem ? 'Item aktualisiert' : 'Item hinzugefügt');
+}
+
+async function deleteItem() {
+  if (!editingItem) return;
+  if (!confirm('Item wirklich löschen?')) return;
+  const it = state.items.find(x => x.id === editingItem);
+  if (it?.photoKey) await deletePhoto(it.photoKey);
+  state.items = state.items.filter(x => x.id !== editingItem);
+  saveState();
+  closeModal('modalItem');
+  await renderDetailItems();
+  toast('Item gelöscht');
+}
+
+// ============================================================
+//   SCANNER
+// ============================================================
+
+async function startScanner() {
+  if (scannerActive) return;
+  scannerActive = true;
+  const video = document.getElementById('scannerVideo');
+  const canvas = document.getElementById('scannerCanvas');
+  const status = document.getElementById('scannerStatus');
+
+  try {
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+    video.srcObject = scannerStream;
+    await video.play();
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    function tick() {
+      if (!scannerActive) return;
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imgData.data, imgData.width, imgData.height);
+        if (code && code.data) {
+          handleScan(code.data);
+          return;
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+    status.textContent = 'QR-CODE INS BILD HALTEN';
+  } catch (err) {
+    status.textContent = 'KAMERA NICHT VERFÜGBAR';
+    console.error(err);
+  }
+}
+
+function stopScanner() {
+  scannerActive = false;
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(t => t.stop());
+    scannerStream = null;
+  }
+}
+
+function handleScan(data) {
+  stopScanner();
+  let code = data;
+  if (data.startsWith('GARAGE://')) code = data.substring(9);
+
+  const c = state.containers.find(x => x.code === code);
+  if (c) {
+    toast(`Behälter ${code} gefunden`);
+    setTimeout(() => {
+      switchTab('overview');
+      openContainerDetail(c.id);
+    }, 400);
+  } else {
+    if (confirm(`Behälter "${code}" nicht gefunden. Jetzt anlegen?`)) {
+      switchTab('overview');
+      setTimeout(() => {
+        openContainerModal();
+        document.getElementById('containerIdInput').value = code;
+      }, 200);
+    } else {
+      switchTab('overview');
+    }
+  }
+}
+
+// ============================================================
+//   SUCHE
+// ============================================================
+
+document.getElementById('searchInput').addEventListener('input', renderSearch);
+
+async function renderSearch() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const out = document.getElementById('searchResults');
+  out.innerHTML = '';
+
+  if (q.length < 2) {
+    out.innerHTML = `<div class="empty"><div class="icon">⌕</div><div class="text">MINDESTENS 2 ZEICHEN</div></div>`;
+    return;
+  }
+
+  const results = state.items
+    .filter(i => i.status === 'active')
+    .filter(i => i.name.toLowerCase().includes(q) || (i.note || '').toLowerCase().includes(q) || i.category.includes(q))
+    .slice(0, 30);
+
+  if (results.length === 0) {
+    out.innerHTML = `<div class="empty"><div class="text">NICHTS GEFUNDEN</div></div>`;
+    return;
+  }
+
+  for (const it of results) {
+    const c = state.containers.find(x => x.id === it.containerId);
+    const photo = it.photoKey ? await loadPhoto(it.photoKey) : null;
+    const div = document.createElement('div');
+    div.className = 'search-result';
+    div.onclick = () => { closeAllModals(); openContainerDetail(c.id); };
+    div.innerHTML = `
+      <div class="thumb" ${photo ? `style="background-image:url(${photo})"` : ''}></div>
+      <div class="info">
+        <div class="item-name">${highlight(escapeHtml(it.name), q)}</div>
+        <div class="container-name">${escapeHtml(c.name)}</div>
+        <div class="location">📍 ${c.code}${c.location ? ' · ' + escapeHtml(c.location) : ''}</div>
+      </div>
+    `;
+    out.appendChild(div);
+  }
+}
+
+function highlight(text, q) {
+  const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+  return text.replace(re, '<mark>$1</mark>');
+}
+
+// ============================================================
+//   AUSMISTEN
+// ============================================================
+
+async function renderDust() {
+  const list = document.getElementById('dustList');
+  list.innerHTML = '';
+
+  const candidates = state.items
+    .filter(i => i.status === 'active')
+    .map(i => ({ ...i, age: daysSince(i.lastUsed || i.created) }))
+    .filter(i => i.age >= 180)
+    .sort((a, b) => b.age - a.age);
+
+  document.getElementById('dustCount').textContent = candidates.length;
+
+  if (candidates.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="icon">✓</div><div class="text">NICHTS ZUM AUSMISTEN</div><div style="margin-top:8px;font-size:12px;">Items, die du seit über 6 Monaten nicht angefasst hast, erscheinen hier.</div></div>`;
+    return;
+  }
+
+  for (const it of candidates) {
+    const c = state.containers.find(x => x.id === it.containerId);
+    const cls = it.age > 365 ? 'danger' : 'warn';
+    const photo = it.photoKey ? await loadPhoto(it.photoKey) : null;
+
+    const card = document.createElement('div');
+    card.className = `dust-card ${cls}`;
+    card.innerHTML = `
+      <div style="display:flex;gap:12px;">
+        <div style="width:60px;height:60px;background:#000;border-radius:4px;flex-shrink:0;${photo?`background-image:url(${photo});background-size:cover;background-position:center;`:''}"></div>
+        <div style="flex:1;">
+          <div class="age ${cls}">${formatAge(it.age).toUpperCase()}</div>
+          <div class="item">${escapeHtml(it.name)}</div>
+          <div style="font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;">${c?.code} · ${escapeHtml(c?.name||'')}</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="keep" onclick="dustAction('${it.id}','keep')">Behalten</button>
+        <button class="sell" onclick="dustAction('${it.id}','sell')">Verkaufen</button>
+        <button class="trash" onclick="dustAction('${it.id}','trash')">Wegwerfen</button>
+      </div>
+    `;
+    list.appendChild(card);
+  }
+}
+
+function dustAction(itemId, action) {
+  const it = state.items.find(x => x.id === itemId);
+  if (!it) return;
+  if (action === 'keep') {
+    it.lastUsed = Date.now();
+    toast('Behalten – Datum aktualisiert');
+  } else if (action === 'sell') {
+    it.status = 'sell';
+    toast('Zum Verkaufen markiert');
+  } else if (action === 'trash') {
+    it.status = 'trash';
+    toast('In den Papierkorb');
+  }
+  saveState();
+  renderDust();
+}
+
+// ============================================================
+//   KI
+// ============================================================
+
+async function detectItem() {
+  if (!state.apiKey) { toast('Bitte API-Key in Einstellungen', true); return; }
+  const photoData = document.getElementById('itemPhotoInput').dataset.photoData;
+  if (!photoData) return;
+
+  const btn = document.getElementById('aiDetectBtn');
+  btn.innerHTML = '<span class="spinner"></span><span>Analysiere…</span>';
+
+  try {
+    const base64 = photoData.split(',')[1];
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': state.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+            { type: 'text', text: 'Du bist ein Garagen-Inventar-Helfer. Analysiere das Foto eines Werkzeugs/Garagen-Items. Antworte AUSSCHLIESSLICH als JSON ohne Markdown:\n{"name":"<kurzer präziser deutscher Name, z.B. \'Maulschlüssel 13mm\'>","category":"<eine von: werkzeug, kfz, garten, sport, saison, material, elektro, sonstiges>","note":"<kurze Erkennungsnotiz, max. 60 Zeichen>"}' }
+          ]
+        }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    let txt = data.content[0].text.trim();
+    txt = txt.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(txt);
+    document.getElementById('itemNameInput').value = parsed.name || '';
+    document.getElementById('itemCategoryInput').value = parsed.category || 'sonstiges';
+    document.getElementById('itemNoteInput').value = parsed.note || '';
+    toast('KI: Erkannt');
+  } catch (e) {
+    toast('KI-Fehler: ' + e.message, true);
+  } finally {
+    btn.innerHTML = '<span>KI: Was ist das?</span>';
+  }
+}
+
+async function getOrganizationTip() {
+  if (!state.apiKey) { toast('Bitte API-Key in Einstellungen', true); return; }
+  if (!currentContainer) return;
+
+  const btn = document.getElementById('aiSuggestBtn');
+  btn.innerHTML = '<span class="spinner"></span><span>Denke nach…</span>';
+  const out = document.getElementById('aiSuggestion');
+
+  try {
+    const items = state.items.filter(i => i.containerId === currentContainer.id && i.status === 'active');
+    const itemList = items.map(i => `- ${i.name} (${i.category})`).join('\n') || '(noch keine Items)';
+
+    const content = [];
+    if (currentContainer.photoKey) {
+      const photo = await loadPhoto(currentContainer.photoKey);
+      if (photo) {
+        content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: photo.split(',')[1] } });
+      }
+    }
+    content.push({
+      type: 'text',
+      text: `Du bist ein Ordnungs-Coach für Garagen. Behälter: "${currentContainer.name}" (${currentContainer.code})${currentContainer.location ? ', Standort: ' + currentContainer.location : ''}.\n\nInhalt:\n${itemList}\n\nGib 3 konkrete, kurze Tipps zur besseren Organisation. Antworte auf Deutsch, max. 4 Sätze gesamt, prägnant und praktisch.`
+    });
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': state.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 400,
+        messages: [{ role: 'user', content }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    out.innerHTML = `<div class="label">⌬ KI-Tipp</div>${escapeHtml(data.content[0].text).replace(/\n/g, '<br>')}`;
+    out.style.display = 'block';
+  } catch (e) {
+    toast('KI-Fehler: ' + e.message, true);
+  } finally {
+    btn.innerHTML = '<span>KI: Organisations-Tipp holen</span>';
+  }
+}
+
+// ============================================================
+//   QR PRINT
+// ============================================================
+
+function printQRCodes() {
+  if (state.containers.length === 0) {
+    toast('Keine Behälter zum Drucken', true);
+    return;
+  }
+  const w = window.open('', '_blank');
+  let html = `
+<!DOCTYPE html><html><head><title>QR-Codes Garage</title>
+<style>
+  @page { size: A4; margin: 10mm; }
+  body { font-family: -apple-system, sans-serif; margin: 0; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+  .label {
+    border: 1px dashed #999;
+    padding: 6mm;
+    text-align: center;
+    page-break-inside: avoid;
+  }
+  .label .code { font-family: monospace; font-weight: bold; font-size: 14pt; margin-bottom: 4mm; letter-spacing: 0.1em; }
+  .label .name { font-size: 10pt; margin-top: 4mm; word-wrap: break-word; }
+  .label .qr { display: flex; justify-content: center; }
+  h1 { font-size: 14pt; margin: 0 0 6mm 0; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+</head><body>
+<h1>Garage Inventar – QR-Codes</h1>
+<div class="grid">`;
+  state.containers.forEach((c, i) => {
+    html += `<div class="label"><div class="code">${c.code}</div><div class="qr" id="q${i}"></div><div class="name">${escapeHtml(c.name)}</div></div>`;
+  });
+  html += `</div><script>
+  ${JSON.stringify(state.containers.map(c => c.code))}.forEach((code, i) => {
+    new QRCode(document.getElementById('q'+i), { text: 'GARAGE://'+code, width: 130, height: 130, correctLevel: QRCode.CorrectLevel.M });
+  });
+  setTimeout(() => window.print(), 600);
+<\/script></body></html>`;
+  w.document.write(html);
+  w.document.close();
+}
+
+// ============================================================
+//   SETTINGS
+// ============================================================
+
+function saveApiKey() {
+  state.apiKey = document.getElementById('apiKey').value.trim();
+  saveState();
+  toast('API-Key gespeichert');
+}
+
+function updateStats() {
+  const cont = state.containers.length;
+  const items = state.items.filter(i => i.status === 'active').length;
+  const trash = state.items.filter(i => i.status !== 'active').length;
+  document.getElementById('headerStats').textContent = `${cont} Behälter // ${items} Items`;
+  document.getElementById('setStatContainers').textContent = cont;
+  document.getElementById('setStatItems').textContent = items;
+  document.getElementById('setStatTrash').textContent = trash;
+}
+
+async function exportData() {
+  const photos = {};
+  const tx = DB.transaction('photos', 'readonly');
+  const store = tx.objectStore('photos');
+  await new Promise((resolve) => {
+    const req = store.openCursor();
+    req.onsuccess = (e) => {
+      const cur = e.target.result;
+      if (cur) { photos[cur.key] = cur.value; cur.continue(); }
+      else resolve();
+    };
+  });
+
+  const blob = new Blob([JSON.stringify({ ...state, photos }, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `garage-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Backup heruntergeladen');
+}
+
+async function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!confirm('Aktuelle Daten überschreiben?')) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    state.containers = data.containers || [];
+    state.items = data.items || [];
+    state.apiKey = data.apiKey || '';
+    if (data.photos) {
+      for (const [k, v] of Object.entries(data.photos)) await savePhoto(k, v);
+    }
+    saveState();
+    document.getElementById('apiKey').value = state.apiKey;
+    renderOverview();
+    toast('Backup geladen');
+  } catch (err) {
+    toast('Import fehlgeschlagen', true);
+  }
+}
+
+async function resetAll() {
+  if (!confirm('WIRKLICH alle Daten löschen?')) return;
+  if (!confirm('Bist du sicher? Das ist nicht rückgängig zu machen!')) return;
+  state = { containers: [], items: [], apiKey: state.apiKey };
+  saveState();
+  // Clear photos
+  const tx = DB.transaction('photos', 'readwrite');
+  tx.objectStore('photos').clear();
+  renderOverview();
+  toast('Alles gelöscht');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+function closeAllModals() {
+  document.querySelectorAll('.modal-bg').forEach(m => m.classList.remove('show'));
+}
+
+// ============================================================
+//   INIT
+// ============================================================
+
+(async function init() {
+  await openDB();
+  loadState();
+  document.getElementById('apiKey').value = state.apiKey;
+  updateStats();
+  renderOverview();
+
+  // Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
