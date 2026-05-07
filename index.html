@@ -2467,7 +2467,19 @@ function migrateLocalPhotosToRTDB() {
   migrateLocalPhotosToRTDB();
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      reg.update(); // Bei jedem Start auf neue Version prüfen
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        sw.addEventListener('statechange', () => {
+          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+            sw.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+    }).catch(() => {});
+    // Wenn neuer SW die Kontrolle übernimmt → Seite neu laden
+    navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
   }
 })();
 </script>
