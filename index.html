@@ -940,24 +940,23 @@ nav.tabs button .icon { font-size: 18px; }
   background: var(--surface-2);
   border: 1px solid var(--border-2);
   color: var(--muted-2);
-  display: grid;
+  display: none;
   place-items: center;
   z-index: 200;
   pointer-events: none;
-  transform: translateX(-50%) translateY(-50px);
 }
 #ptr.ptr-ready { color: var(--primary); border-color: var(--primary); }
-#ptr.ptr-snap { transition: transform 0.25s ease; }
 @keyframes ptr-spin {
   0%   { transform: translateX(-50%) translateY(10px) rotate(0deg); }
   100% { transform: translateX(-50%) translateY(10px) rotate(360deg); }
 }
-#ptr.ptr-loading { animation: ptr-spin 0.35s ease-in forwards; }
+#ptr.ptr-loading { display: grid; animation: ptr-spin 0.35s ease-in forwards; }
 
-/* ── MOBILE: topbar vereinfachen ── */
+/* ── MOBILE: topbar vereinfachen + Platz für Tab-Bar ── */
 @media (max-width: 767px) {
   .topbar-brand { width: auto; border-right: none; flex: 1; }
   .topbar-nav { display: none; }
+  .view { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 }
 
 /* ── DESKTOP BREAKPOINT ── */
@@ -1262,6 +1261,10 @@ nav.tabs button .icon { font-size: 18px; }
       <button class="modal-close" onclick="closeModal('modalDetail')">×</button>
     </div>
     <div class="detail-photo" id="detailPhoto"></div>
+    <div id="detailLocationPhotoWrap" style="display:none; margin-bottom:10px;">
+      <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;color:var(--muted-2);text-transform:uppercase;margin-bottom:6px;">Standort</div>
+      <div id="detailLocationPhoto" style="width:100%;aspect-ratio:16/9;border-radius:var(--radius);background:var(--surface-2);background-size:cover;background-position:center;"></div>
+    </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--primary);letter-spacing:0.12em;font-weight:700;" id="detailId"></div>
@@ -1610,7 +1613,7 @@ function switchTab(tab) {
 
   if (tab === 'overview') renderOverview();
   if (tab === 'dust') renderDust();
-  if (tab === 'search') document.getElementById('searchInput').focus();
+  if (tab === 'search') { document.getElementById('searchInput').focus(); renderSearch(); }
 }
 
 // ============================================================
@@ -1910,6 +1913,17 @@ async function openContainerDetail(id) {
   photoEl.style.backgroundImage = '';
   const photoUrl = await getPhotoUrl(c);
   if (photoUrl) photoEl.style.backgroundImage = `url(${photoUrl})`;
+
+  const locPhotoWrap = document.getElementById('detailLocationPhotoWrap');
+  const locPhotoEl = document.getElementById('detailLocationPhoto');
+  locPhotoEl.style.backgroundImage = '';
+  if (c.locationPhotoKey) {
+    const locUrl = await loadPhoto(c.locationPhotoKey);
+    if (locUrl) {
+      locPhotoEl.style.backgroundImage = `url(${locUrl})`;
+      locPhotoWrap.style.display = 'block';
+    } else { locPhotoWrap.style.display = 'none'; }
+  } else { locPhotoWrap.style.display = 'none'; }
 
   const qrContainer = document.getElementById('detailQR');
   qrContainer.innerHTML = '';
@@ -2756,14 +2770,16 @@ function migrateLocalPhotosToRTDB() {
 
   main.addEventListener('touchstart', e => {
     if (main.scrollTop === 0) startY = e.touches[0].clientY;
+    curDY = 0;
   }, { passive: true });
 
   main.addEventListener('touchmove', e => {
     if (!startY) return;
     curDY = Math.max(0, e.touches[0].clientY - startY);
-    if (curDY === 0) return;
+    if (curDY === 0) { ptr.style.display = 'none'; return; }
+    ptr.style.display = 'grid';
     const progress = Math.min(curDY / THRESHOLD, 1);
-    const y = -50 + progress * 60;
+    const y = -18 + progress * 28; // -18px (just above topbar) → 10px (just below topbar)
     ptr.style.transform = `translateX(-50%) translateY(${y}px) rotate(${progress * 200}deg)`;
     ptr.classList.toggle('ptr-ready', curDY >= THRESHOLD);
   }, { passive: true });
@@ -2771,13 +2787,12 @@ function migrateLocalPhotosToRTDB() {
   main.addEventListener('touchend', () => {
     if (!startY) return;
     if (curDY >= THRESHOLD) {
-      ptr.style.transform = 'translateX(-50%) translateY(10px) rotate(0deg)';
       ptr.classList.add('ptr-loading');
       setTimeout(() => location.reload(), 400);
     } else {
-      ptr.classList.add('ptr-snap');
-      ptr.style.transform = 'translateX(-50%) translateY(-50px)';
-      setTimeout(() => { ptr.classList.remove('ptr-snap', 'ptr-ready'); }, 300);
+      ptr.style.display = 'none';
+      ptr.style.transform = '';
+      ptr.classList.remove('ptr-ready');
     }
     startY = 0; curDY = 0;
   }, { passive: true });
