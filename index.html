@@ -1472,14 +1472,15 @@ nav.tabs button .icon { font-size: 18px; }
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">Ziehe ein Rechteck auf das Foto, um den genauen Standort des Behälters zu markieren.</div>
     <div id="annotationWrap">
       <img id="annotationImg" alt="">
-      <canvas id="annotationCanvas"
+      <canvas id="annotationCanvas" style="touch-action:none;user-select:none;"
         onmousedown="annotationPointerDown(event)"
         onmousemove="annotationPointerMove(event)"
-        onmouseup="annotationPointerUp()"
-        onmouseleave="annotationPointerUp()"
+        onmouseup="_annotationDragging=false"
+        onmouseleave="_annotationDragging=false"
         ontouchstart="annotationPointerDown(event)"
         ontouchmove="annotationPointerMove(event)"
-        ontouchend="annotationPointerUp()"></canvas>
+        ontouchend="_annotationDragging=false"
+        ontouchcancel="_annotationDragging=false"></canvas>
     </div>
     <div style="margin-bottom:14px;">
       <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;color:var(--muted-2);text-transform:uppercase;margin-bottom:8px;">Farbe der Markierung</div>
@@ -3320,21 +3321,18 @@ async function exportData() {
 //   STANDORT-ANNOTATION
 // ============================================================
 
-const ANNOTATION_COLORS = [
-  '#FFD60A', // Gelb (Primary)
-  '#FF5A36', // Rot
-  '#FFA319', // Orange
-  '#10b981', // Grün
-  '#60a5fa', // Blau
-  '#e879f9', // Lila
-  '#ffffff',  // Weiß
-];
+const ANNOTATION_COLORS = ['#FFD60A','#FF5A36','#FFA319','#10b981','#60a5fa','#e879f9','#ffffff'];
 
-let _annotationRect = null;  // { x, y, w, h } as 0–1 fractions
+let _annotationRect = null;   // { x, y, w, h } as 0–1 fractions
 let _annotationColor = '#FFD60A';
 let _annotationDragging = false;
 let _annotationStartX = 0;
 let _annotationStartY = 0;
+
+// Global pointer-up to stop drawing even if finger leaves canvas
+function _annotationGlobalUp() { _annotationDragging = false; }
+window.addEventListener('mouseup',  _annotationGlobalUp);
+window.addEventListener('touchend', _annotationGlobalUp);
 
 function renderLocationAnnotation() {
   const c = currentContainer;
@@ -3345,12 +3343,12 @@ function renderLocationAnnotation() {
   const { x, y, w, h, color } = c.locationAnnotation;
   const ns = 'http://www.w3.org/2000/svg';
   const fill = document.createElementNS(ns, 'rect');
-  fill.setAttribute('x', x * 100); fill.setAttribute('y', y * 100);
+  fill.setAttribute('x',     x * 100); fill.setAttribute('y',      y * 100);
   fill.setAttribute('width', w * 100); fill.setAttribute('height', h * 100);
   fill.setAttribute('fill', color + '33');
   svg.appendChild(fill);
   const stroke = document.createElementNS(ns, 'rect');
-  stroke.setAttribute('x', x * 100); stroke.setAttribute('y', y * 100);
+  stroke.setAttribute('x',     x * 100); stroke.setAttribute('y',      y * 100);
   stroke.setAttribute('width', w * 100); stroke.setAttribute('height', h * 100);
   stroke.setAttribute('fill', 'none');
   stroke.setAttribute('stroke', color);
@@ -3359,31 +3357,50 @@ function renderLocationAnnotation() {
   svg.appendChild(stroke);
 }
 
+function _syncCanvasSize() {
+  const canvas = document.getElementById('annotationCanvas');
+  const img    = document.getElementById('annotationImg');
+  if (!canvas || !img) return;
+  const w = img.clientWidth;
+  const h = img.clientHeight;
+  if (w > 0 && h > 0 && (canvas.width !== w || canvas.height !== h)) {
+    canvas.width  = w;
+    canvas.height = h;
+  }
+}
+
 function openAnnotationEditor() {
   if (!currentContainer?.locationPhotoKey) {
     toast('Kein Standortfoto vorhanden', true); return;
   }
-  _annotationRect = currentContainer.locationAnnotation ? { ...currentContainer.locationAnnotation } : null;
+  _annotationRect  = currentContainer.locationAnnotation ? { ...currentContainer.locationAnnotation } : null;
   _annotationColor = currentContainer.locationAnnotation?.color || '#FFD60A';
+  _annotationDragging = false;
+
+  // Show modal first so layout is computed when photo loads
+  document.getElementById('modalAnnotation').classList.add('show');
   renderAnnotationColorPicker();
 
+  // Clear old image to avoid stale display
+  const img = document.getElementById('annotationImg');
+  img.src = '';
+
   loadPhoto(currentContainer.locationPhotoKey).then(url => {
-    const img = document.getElementById('annotationImg');
+    if (!url) { toast('Foto konnte nicht geladen werden', true); return; }
     img.onload = () => {
-      const canvas = document.getElementById('annotationCanvas');
-      canvas.width = img.offsetWidth || img.naturalWidth;
-      canvas.height = img.offsetHeight || img.naturalHeight;
-      drawAnnotationCanvas();
+      // Wait for one paint cycle so clientWidth is valid
+      requestAnimationFrame(() => {
+        _syncCanvasSize();
+        drawAnnotationCanvas();
+      });
     };
     img.src = url;
-    if (img.complete) img.onload();
   });
-
-  document.getElementById('modalAnnotation').classList.add('show');
 }
 
 function renderAnnotationColorPicker() {
   const wrap = document.getElementById('annotationColors');
+  if (!wrap) return;
   wrap.innerHTML = '';
   ANNOTATION_COLORS.forEach(color => {
     const btn = document.createElement('button');
@@ -3396,48 +3413,44 @@ function renderAnnotationColorPicker() {
 
 function drawAnnotationCanvas() {
   const canvas = document.getElementById('annotationCanvas');
-  if (!canvas) return;
+  if (!canvas || canvas.width === 0) return;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!_annotationRect || _annotationRect.w < 0.001) return;
+  if (!_annotationRect || _annotationRect.w < 0.002) return;
   const { x, y, w, h } = _annotationRect;
-  const px = x * canvas.width, py = y * canvas.height;
-  const pw = w * canvas.width, ph = h * canvas.height;
-  ctx.fillStyle = _annotationColor + '33';
+  const px = x * canvas.width,  py = y * canvas.height;
+  const pw = w * canvas.width,  ph = h * canvas.height;
+  ctx.fillStyle = _annotationColor + '40';
   ctx.fillRect(px, py, pw, ph);
   ctx.strokeStyle = _annotationColor;
-  ctx.lineWidth = Math.max(2, canvas.width * 0.004);
+  ctx.lineWidth = Math.max(2, Math.round(canvas.width * 0.005));
   ctx.strokeRect(px, py, pw, ph);
 }
 
-function _getAnnotationPos(e) {
+function _annotationEventPos(e) {
   const canvas = document.getElementById('annotationCanvas');
-  const rect = canvas.getBoundingClientRect();
-  const src = e.touches ? e.touches[0] : e;
+  const rect   = canvas.getBoundingClientRect();
+  const src    = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
   return {
-    x: Math.max(0, Math.min(1, (src.clientX - rect.left) / rect.width)),
-    y: Math.max(0, Math.min(1, (src.clientY - rect.top) / rect.height)),
+    x: Math.max(0, Math.min(1, (src.clientX - rect.left)  / rect.width)),
+    y: Math.max(0, Math.min(1, (src.clientY - rect.top)   / rect.height)),
   };
 }
 
 function annotationPointerDown(e) {
   e.preventDefault();
-  const pos = _getAnnotationPos(e);
+  _syncCanvasSize();
+  const pos = _annotationEventPos(e);
   _annotationDragging = true;
-  _annotationStartX = pos.x;
-  _annotationStartY = pos.y;
+  _annotationStartX   = pos.x;
+  _annotationStartY   = pos.y;
   _annotationRect = { x: pos.x, y: pos.y, w: 0, h: 0 };
 }
 
 function annotationPointerMove(e) {
   if (!_annotationDragging) return;
   e.preventDefault();
-  const canvas = document.getElementById('annotationCanvas');
-  const rect = canvas.getBoundingClientRect();
-  if (Math.abs(canvas.width - rect.width) > 2) {
-    canvas.width = rect.width; canvas.height = rect.height;
-  }
-  const pos = _getAnnotationPos(e);
+  const pos = _annotationEventPos(e);
   _annotationRect = {
     x: Math.min(_annotationStartX, pos.x),
     y: Math.min(_annotationStartY, pos.y),
@@ -3447,10 +3460,6 @@ function annotationPointerMove(e) {
   drawAnnotationCanvas();
 }
 
-function annotationPointerUp() {
-  _annotationDragging = false;
-}
-
 function clearAnnotation() {
   _annotationRect = null;
   drawAnnotationCanvas();
@@ -3458,6 +3467,7 @@ function clearAnnotation() {
 
 function closeAnnotationModal() {
   document.getElementById('modalAnnotation').classList.remove('show');
+  _annotationDragging = false;
 }
 
 async function saveAnnotation() {
