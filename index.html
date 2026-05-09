@@ -1433,7 +1433,18 @@ nav.tabs button .icon { font-size: 18px; }
     </button>
     <div class="field" id="itemDestField" style="display:none; margin-top:14px;">
       <label>Zuordnung</label>
-      <select id="itemDestInput"></select>
+      <select id="itemDestInput" onchange="onDestChange()"></select>
+    </div>
+    <div id="itemAusmisteField" style="display:none; margin-top:10px;">
+      <label style="font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:8px;">Ausmisten als</label>
+      <div style="display:flex;gap:8px;">
+        <label style="flex:1;display:flex;align-items:center;gap:7px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;" id="ausmisteOptSell">
+          <input type="radio" name="ausmisteAction" value="sell" style="accent-color:#d97706;"> <span style="font-size:13px;">€ Verkaufen</span>
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:7px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;" id="ausmisteOptTrash">
+          <input type="radio" name="ausmisteAction" value="trash" checked style="accent-color:var(--danger);"> <span style="font-size:13px;">🗑 Wegwerfen</span>
+        </label>
+      </div>
     </div>
     <div class="field" style="margin-top:14px;">
       <label>Name</label>
@@ -2306,8 +2317,15 @@ function editCurrentContainer() {
 //   ITEMS
 // ============================================================
 
+function onDestChange() {
+  const val = document.getElementById('itemDestInput').value;
+  document.getElementById('itemAusmisteField').style.display = val === '__ausmisten__' ? 'block' : 'none';
+}
+
 function openItemModalStandalone() {
   itemModalStandaloneMode = true;
+  document.getElementById('itemAusmisteField').style.display = 'none';
+  document.querySelector('input[name="ausmisteAction"][value="trash"]').checked = true;
   editingItem = null;
   document.getElementById('itemModalTitle').textContent = 'Neues Item';
   document.getElementById('itemNameInput').value = '';
@@ -2471,7 +2489,10 @@ async function saveItem() {
       roomId: currentRoomId,
       name, category, note, quantity, expiresAt,
       lentTo: null, lentSince: null,
-      photoKey, status: isAusmisten ? 'trash' : 'active',
+      photoKey,
+      status: isAusmisten
+        ? (document.querySelector('input[name="ausmisteAction"]:checked')?.value || 'trash')
+        : 'active',
       created: Date.now(), lastUsed: Date.now()
     });
     saveState();
