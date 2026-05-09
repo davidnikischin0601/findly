@@ -1387,6 +1387,7 @@ nav.tabs button .icon { font-size: 18px; }
         <option value="material">Baumaterial</option>
         <option value="elektro">Elektro / Kabel</option>
         <option value="sonstiges">Sonstiges</option>
+        <option value="fluessigkeit">Flüssigkeit</option>
       </select>
       <div style="display:flex;gap:6px;margin-top:6px;">
         <input type="text" id="itemCustomCategoryInput" placeholder="Neue Kategorie…" style="flex:1;font-size:12px;">
@@ -2202,8 +2203,8 @@ function openItemModalStandalone() {
   document.getElementById('aiDetectBtn').style.display = 'none';
   // Populate category select
   const sel = document.getElementById('itemCategoryInput');
-  const fixedOpts = ['werkzeug','kfz','garten','sport','saison','material','elektro','sonstiges'];
-  const fixedLabels = {'werkzeug':'Werkzeug','kfz':'KFZ','garten':'Garten','sport':'Sport / Fahrrad','saison':'Saison (Deko, Winter)','material':'Baumaterial','elektro':'Elektro / Kabel','sonstiges':'Sonstiges'};
+  const fixedOpts = ['werkzeug','kfz','garten','sport','saison','material','elektro','fluessigkeit','sonstiges'];
+  const fixedLabels = {'werkzeug':'Werkzeug','kfz':'KFZ','garten':'Garten','sport':'Sport / Fahrrad','saison':'Saison (Deko, Winter)','material':'Baumaterial','elektro':'Elektro / Kabel','fluessigkeit':'Flüssigkeit','sonstiges':'Sonstiges'};
   sel.innerHTML = fixedOpts.map(v => `<option value="${v}">${fixedLabels[v]}</option>`).join('');
   (state.customCategories || []).forEach(cat => {
     const opt = document.createElement('option'); opt.value = cat; opt.textContent = cat;
@@ -2250,8 +2251,8 @@ function openItemModal(id = null) {
 
   // Populate category select with fixed + custom options
   const sel = document.getElementById('itemCategoryInput');
-  const fixedOpts = ['werkzeug','kfz','garten','sport','saison','material','elektro','sonstiges'];
-  const fixedLabels = {'werkzeug':'Werkzeug','kfz':'KFZ','garten':'Garten','sport':'Sport / Fahrrad','saison':'Saison (Deko, Winter)','material':'Baumaterial','elektro':'Elektro / Kabel','sonstiges':'Sonstiges'};
+  const fixedOpts = ['werkzeug','kfz','garten','sport','saison','material','elektro','fluessigkeit','sonstiges'];
+  const fixedLabels = {'werkzeug':'Werkzeug','kfz':'KFZ','garten':'Garten','sport':'Sport / Fahrrad','saison':'Saison (Deko, Winter)','material':'Baumaterial','elektro':'Elektro / Kabel','fluessigkeit':'Flüssigkeit','sonstiges':'Sonstiges'};
   sel.innerHTML = fixedOpts.map(v => `<option value="${v}">${fixedLabels[v]}</option>`).join('');
   (state.customCategories || []).forEach(cat => {
     const opt = document.createElement('option');
@@ -2600,8 +2601,8 @@ function renderSearchFilters() {
   const wrap = document.getElementById('searchFilters');
   wrap.innerHTML = '';
   const rooms = state.rooms || [];
-  const fixedCats = ['werkzeug','kfz','garten','sport','saison','material','elektro','sonstiges'];
-  const fixedLabels = {'werkzeug':'Werkzeug','kfz':'KFZ','garten':'Garten','sport':'Sport / Rad','saison':'Saison','material':'Baumaterial','elektro':'Elektro','sonstiges':'Sonstiges'};
+  const fixedCats = ['werkzeug','kfz','garten','sport','saison','material','elektro','fluessigkeit','sonstiges'];
+  const fixedLabels = {'werkzeug':'Werkzeug','kfz':'KFZ','garten':'Garten','sport':'Sport / Rad','saison':'Saison','material':'Baumaterial','elektro':'Elektro','fluessigkeit':'Flüssigkeit','sonstiges':'Sonstiges'};
   const allCats = [...fixedCats, ...(state.customCategories || [])];
 
   if (rooms.length > 0) {
@@ -3037,7 +3038,7 @@ async function detectItem() {
           role: 'user',
           content: [
             { type: 'image', source: imgSource },
-            { type: 'text', text: 'Du bist ein Garagen-Inventar-Helfer. Analysiere das Foto eines Werkzeugs/Garagen-Items. Antworte AUSSCHLIESSLICH als JSON ohne Markdown:\n{"name":"<kurzer präziser deutscher Name, z.B. \'Maulschlüssel 13mm\'>","category":"<eine von: werkzeug, kfz, garten, sport, saison, material, elektro, sonstiges>","note":"<kurze Erkennungsnotiz, max. 60 Zeichen>"}' }
+            { type: 'text', text: 'Du bist ein Garagen-Inventar-Helfer. Analysiere das Foto eines Werkzeugs/Garagen-Items. Antworte AUSSCHLIESSLICH als JSON ohne Markdown:\n{"name":"<kurzer präziser deutscher Name, z.B. \'Maulschlüssel 13mm\'>","category":"<eine von: werkzeug, kfz, garten, sport, saison, material, elektro, fluessigkeit, sonstiges>","note":"<kurze Erkennungsnotiz, max. 60 Zeichen>"}' }
           ]
         }]
       })
