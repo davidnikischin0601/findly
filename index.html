@@ -1400,6 +1400,7 @@ let state = {
   items: [],
   apiKey: ''
 };
+let _stateVersion = 0;
 
 let editingContainer = null;
 let editingItem = null;
@@ -1501,14 +1502,39 @@ function loadLocalState() {
 }
 
 async function syncFromFirebase() {
+  const toArr = v => !v ? [] : Array.isArray(v) ? v : Object.values(v);
+
+  // If a reset is pending, wipe Firebase and skip restore
+  const resetAt = parseInt(localStorage.getItem('garage_resetAt') || '0');
+  if (resetAt) {
+    try {
+      await Promise.all([fbRef.set(null), fbPhotosRef.set(null)]);
+      localStorage.removeItem('garage_resetAt');
+      // Re-upload any data added after the reset so Firebase stays in sync
+      const localData = { rooms: state.rooms, containers: state.containers, items: state.items };
+      if (state.containers.length > 0 || state.items.length > 0) {
+        fbRef.set(localData).catch(() => {});
+      }
+      setSyncStatus(true);
+    } catch (e) {
+      console.warn('Firebase-Cleanup nach Reset fehlgeschlagen:', e);
+      setSyncStatus(false);
+    }
+    return false;
+  }
+
+  const versionAtStart = _stateVersion;
   try {
     const snapshot = await fbRef.once('value');
+    if (_stateVersion !== versionAtStart) return false; // user changed state during sync → discard
     const data = snapshot.val();
     setSyncStatus(true);
     if (data && (data.containers || data.items)) {
-      state.containers = data.containers || [];
-      state.items = data.items || [];
-      localStorage.setItem('garage_state', JSON.stringify({ containers: state.containers, items: state.items }));
+      const rooms = toArr(data.rooms);
+      if (rooms.length > 0) state.rooms = rooms;
+      state.containers = toArr(data.containers);
+      state.items = toArr(data.items);
+      localStorage.setItem('garage_state', JSON.stringify({ rooms: state.rooms, containers: state.containers, items: state.items }));
       return true;
     }
     return false;
@@ -1520,6 +1546,7 @@ async function syncFromFirebase() {
 }
 
 function saveState() {
+  _stateVersion++;
   const data = { rooms: state.rooms, containers: state.containers, items: state.items };
   localStorage.setItem('garage_state', JSON.stringify(data));
   fbRef.set(data)
@@ -1761,12 +1788,13 @@ function migrateRooms() {
   if (state.rooms.length === 0) {
     const defaultRoom = { id: uid(), code: 'G', name: 'Garage', created: Date.now() };
     state.rooms = [defaultRoom];
-    state.containers.forEach(c => { if (!c.roomId) c.roomId = defaultRoom.id; });
-    state.items.forEach(i => { if (!i.roomId) i.roomId = defaultRoom.id; });
+    state.containers.forEach(c => { c.roomId = defaultRoom.id; });
+    state.items.forEach(i => { i.roomId = defaultRoom.id; });
   } else {
     const fallbackId = state.rooms[0].id;
-    state.containers.forEach(c => { if (!c.roomId) c.roomId = fallbackId; });
-    state.items.forEach(i => { if (!i.roomId) i.roomId = fallbackId; });
+    const validIds = new Set(state.rooms.map(r => r.id));
+    state.containers.forEach(c => { if (!c.roomId || !validIds.has(c.roomId)) c.roomId = fallbackId; });
+    state.items.forEach(i => { if (!i.roomId || !validIds.has(i.roomId)) i.roomId = fallbackId; });
   }
   if (!currentRoomId || !state.rooms.find(r => r.id === currentRoomId))
     currentRoomId = state.rooms[0].id;
@@ -2842,12 +2870,29 @@ async function importData(e) {
 
 async function resetAll() {
   if (!await confirmDialog('WIRKLICH alle Daten löschen? Das ist endgültig und kann nicht rückgängig gemacht werden.', 'Alle Daten löschen')) return;
-  state = { containers: [], items: [], apiKey: state.apiKey };
-  saveState();
-  const tx = DB.transaction('photos', 'readwrite');
-  tx.objectStore('photos').clear();
-  renderOverview();
-  toast('Alles gelöscht');
+
+  localStorage.setItem('garage_resetAt', Date.now().toString());
+  _stateVersion++;
+
+  state = { rooms: [], containers: [], items: [], apiKey: state.apiKey };
+  migrateRooms();
+  localStorage.setItem('garage_state', JSON.stringify({ rooms: state.rooms, containers: [], items: [] }));
+
+  // UI update FIRST — before anything that could throw
+  updateStats();
+  switchTab('overview');
+
+  // IDB photos — errors must not abort the rest
+  try {
+    const tx = DB.transaction('photos', 'readwrite');
+    tx.objectStore('photos').clear();
+  } catch (e) {
+    console.warn('IDB-Clear fehlgeschlagen:', e);
+  }
+
+  Promise.all([fbRef.set(null), fbPhotosRef.set(null)])
+    .then(() => setSyncStatus(true))
+    .catch(e => { console.warn('Firebase-Löschung fehlgeschlagen:', e); setSyncStatus(false); });
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
