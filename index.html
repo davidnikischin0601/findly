@@ -984,6 +984,14 @@ nav.tabs button .icon { font-size: 18px; }
 .filter-chip:hover { border-color: var(--muted-3); color: var(--ink-2); }
 .filter-chip.active { border-color: var(--primary); color: var(--primary); background: rgba(255,214,10,0.06); }
 
+/* ── ANNOTATION EDITOR ── */
+#annotationWrap { position:relative; line-height:0; border-radius:var(--radius-sm); overflow:hidden; margin-bottom:12px; background:var(--surface-3); }
+#annotationImg { width:100%; display:block; }
+#annotationCanvas { position:absolute; inset:0; width:100%; height:100%; cursor:crosshair; touch-action:none; }
+.annotation-color-btn { width:28px; height:28px; border-radius:50%; border:3px solid transparent; cursor:pointer; flex-shrink:0; transition:border-color 0.15s, transform 0.1s; }
+.annotation-color-btn:active { transform:scale(0.9); }
+.annotation-color-btn.selected { border-color:var(--ink) !important; }
+
 /* ── ITEM BADGES ── */
 .badge-expiry { display:inline-block; font-size:9px; font-family:'JetBrains Mono',monospace; letter-spacing:0.06em; padding:1px 5px; border-radius:3px; background:rgba(255,90,54,0.18); color:var(--danger); margin-left:6px; }
 .badge-lent { display:inline-block; font-size:9px; font-family:'JetBrains Mono',monospace; letter-spacing:0.06em; padding:1px 5px; border-radius:3px; background:rgba(255,163,25,0.18); color:var(--amber); margin-left:6px; }
@@ -1326,8 +1334,14 @@ nav.tabs button .icon { font-size: 18px; }
     </div>
     <div class="detail-photo" id="detailPhoto"></div>
     <div id="detailLocationPhotoWrap" style="display:none; margin-bottom:10px;">
-      <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;color:var(--muted-2);text-transform:uppercase;margin-bottom:6px;">Standort</div>
-      <div id="detailLocationPhoto" style="width:100%;aspect-ratio:16/9;border-radius:var(--radius);background:var(--surface-2);background-size:cover;background-position:center;"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;color:var(--muted-2);text-transform:uppercase;">Standort</div>
+        <button class="btn secondary" onclick="openAnnotationEditor()" style="font-size:10px;padding:4px 10px;height:auto;">⊞ Markieren</button>
+      </div>
+      <div style="position:relative;border-radius:var(--radius);overflow:hidden;line-height:0;">
+        <div id="detailLocationPhoto" style="width:100%;aspect-ratio:16/9;background:var(--surface-2);background-size:cover;background-position:center;"></div>
+        <svg id="detailLocationAnnotation" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+      </div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <div>
@@ -1420,6 +1434,36 @@ nav.tabs button .icon { font-size: 18px; }
     <div class="btn-row">
       <button class="btn" onclick="saveItem()">Speichern</button>
       <button class="btn ghost" id="deleteItemBtn" onclick="deleteItem()" style="display:none;">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ANNOTATION EDITOR ── -->
+<div class="modal-bg" id="modalAnnotation">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Standort markieren</span>
+      <button class="modal-close" onclick="closeAnnotationModal()">×</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">Ziehe ein Rechteck auf das Foto, um den genauen Standort des Behälters zu markieren.</div>
+    <div id="annotationWrap">
+      <img id="annotationImg" alt="">
+      <canvas id="annotationCanvas"
+        onmousedown="annotationPointerDown(event)"
+        onmousemove="annotationPointerMove(event)"
+        onmouseup="annotationPointerUp()"
+        onmouseleave="annotationPointerUp()"
+        ontouchstart="annotationPointerDown(event)"
+        ontouchmove="annotationPointerMove(event)"
+        ontouchend="annotationPointerUp()"></canvas>
+    </div>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;color:var(--muted-2);text-transform:uppercase;margin-bottom:8px;">Farbe der Markierung</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="annotationColors"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="saveAnnotation()">Speichern</button>
+      <button class="btn ghost" onclick="clearAnnotation()">Markierung löschen</button>
     </div>
   </div>
 </div>
@@ -2136,6 +2180,7 @@ async function openContainerDetail(id) {
     if (locUrl) {
       locPhotoEl.style.backgroundImage = `url(${locUrl})`;
       locPhotoWrap.style.display = 'block';
+      renderLocationAnnotation();
     } else { locPhotoWrap.style.display = 'none'; }
   } else { locPhotoWrap.style.display = 'none'; }
 
@@ -3203,6 +3248,163 @@ async function exportData() {
   a.click();
   URL.revokeObjectURL(url);
   toast('Backup heruntergeladen');
+}
+
+// ============================================================
+//   STANDORT-ANNOTATION
+// ============================================================
+
+const ANNOTATION_COLORS = [
+  '#FFD60A', // Gelb (Primary)
+  '#FF5A36', // Rot
+  '#FFA319', // Orange
+  '#10b981', // Grün
+  '#60a5fa', // Blau
+  '#e879f9', // Lila
+  '#ffffff',  // Weiß
+];
+
+let _annotationRect = null;  // { x, y, w, h } as 0–1 fractions
+let _annotationColor = '#FFD60A';
+let _annotationDragging = false;
+let _annotationStartX = 0;
+let _annotationStartY = 0;
+
+function renderLocationAnnotation() {
+  const c = currentContainer;
+  const svg = document.getElementById('detailLocationAnnotation');
+  if (!svg) return;
+  svg.innerHTML = '';
+  if (!c?.locationAnnotation) return;
+  const { x, y, w, h, color } = c.locationAnnotation;
+  const ns = 'http://www.w3.org/2000/svg';
+  const fill = document.createElementNS(ns, 'rect');
+  fill.setAttribute('x', x * 100); fill.setAttribute('y', y * 100);
+  fill.setAttribute('width', w * 100); fill.setAttribute('height', h * 100);
+  fill.setAttribute('fill', color + '33');
+  svg.appendChild(fill);
+  const stroke = document.createElementNS(ns, 'rect');
+  stroke.setAttribute('x', x * 100); stroke.setAttribute('y', y * 100);
+  stroke.setAttribute('width', w * 100); stroke.setAttribute('height', h * 100);
+  stroke.setAttribute('fill', 'none');
+  stroke.setAttribute('stroke', color);
+  stroke.setAttribute('stroke-width', '2.5');
+  stroke.setAttribute('rx', '1');
+  svg.appendChild(stroke);
+}
+
+function openAnnotationEditor() {
+  if (!currentContainer?.locationPhotoKey) {
+    toast('Kein Standortfoto vorhanden', true); return;
+  }
+  _annotationRect = currentContainer.locationAnnotation ? { ...currentContainer.locationAnnotation } : null;
+  _annotationColor = currentContainer.locationAnnotation?.color || '#FFD60A';
+  renderAnnotationColorPicker();
+
+  loadPhoto(currentContainer.locationPhotoKey).then(url => {
+    const img = document.getElementById('annotationImg');
+    img.onload = () => {
+      const canvas = document.getElementById('annotationCanvas');
+      canvas.width = img.offsetWidth || img.naturalWidth;
+      canvas.height = img.offsetHeight || img.naturalHeight;
+      drawAnnotationCanvas();
+    };
+    img.src = url;
+    if (img.complete) img.onload();
+  });
+
+  document.getElementById('modalAnnotation').classList.add('show');
+}
+
+function renderAnnotationColorPicker() {
+  const wrap = document.getElementById('annotationColors');
+  wrap.innerHTML = '';
+  ANNOTATION_COLORS.forEach(color => {
+    const btn = document.createElement('button');
+    btn.className = 'annotation-color-btn' + (color === _annotationColor ? ' selected' : '');
+    btn.style.background = color;
+    btn.onclick = () => { _annotationColor = color; renderAnnotationColorPicker(); drawAnnotationCanvas(); };
+    wrap.appendChild(btn);
+  });
+}
+
+function drawAnnotationCanvas() {
+  const canvas = document.getElementById('annotationCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!_annotationRect || _annotationRect.w < 0.001) return;
+  const { x, y, w, h } = _annotationRect;
+  const px = x * canvas.width, py = y * canvas.height;
+  const pw = w * canvas.width, ph = h * canvas.height;
+  ctx.fillStyle = _annotationColor + '33';
+  ctx.fillRect(px, py, pw, ph);
+  ctx.strokeStyle = _annotationColor;
+  ctx.lineWidth = Math.max(2, canvas.width * 0.004);
+  ctx.strokeRect(px, py, pw, ph);
+}
+
+function _getAnnotationPos(e) {
+  const canvas = document.getElementById('annotationCanvas');
+  const rect = canvas.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return {
+    x: Math.max(0, Math.min(1, (src.clientX - rect.left) / rect.width)),
+    y: Math.max(0, Math.min(1, (src.clientY - rect.top) / rect.height)),
+  };
+}
+
+function annotationPointerDown(e) {
+  e.preventDefault();
+  const pos = _getAnnotationPos(e);
+  _annotationDragging = true;
+  _annotationStartX = pos.x;
+  _annotationStartY = pos.y;
+  _annotationRect = { x: pos.x, y: pos.y, w: 0, h: 0 };
+}
+
+function annotationPointerMove(e) {
+  if (!_annotationDragging) return;
+  e.preventDefault();
+  const canvas = document.getElementById('annotationCanvas');
+  const rect = canvas.getBoundingClientRect();
+  if (Math.abs(canvas.width - rect.width) > 2) {
+    canvas.width = rect.width; canvas.height = rect.height;
+  }
+  const pos = _getAnnotationPos(e);
+  _annotationRect = {
+    x: Math.min(_annotationStartX, pos.x),
+    y: Math.min(_annotationStartY, pos.y),
+    w: Math.abs(pos.x - _annotationStartX),
+    h: Math.abs(pos.y - _annotationStartY),
+  };
+  drawAnnotationCanvas();
+}
+
+function annotationPointerUp() {
+  _annotationDragging = false;
+}
+
+function clearAnnotation() {
+  _annotationRect = null;
+  drawAnnotationCanvas();
+}
+
+function closeAnnotationModal() {
+  document.getElementById('modalAnnotation').classList.remove('show');
+}
+
+async function saveAnnotation() {
+  const c = currentContainer;
+  if (!c) return;
+  if (_annotationRect && _annotationRect.w > 0.01 && _annotationRect.h > 0.01) {
+    c.locationAnnotation = { ..._annotationRect, color: _annotationColor };
+  } else {
+    c.locationAnnotation = null;
+  }
+  saveState();
+  closeAnnotationModal();
+  renderLocationAnnotation();
 }
 
 function exportCSV() {
