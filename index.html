@@ -10,6 +10,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
@@ -814,6 +815,15 @@ mark { background: var(--primary); color: var(--primary-ink); padding: 0 2px; bo
 }
 .qr-display canvas, .qr-display img { display: block; }
 
+.barcode-display {
+  background: #fff;
+  padding: 10px 14px 8px;
+  border-radius: var(--radius);
+  margin: 12px 0;
+  display: flex; flex-direction: column; align-items: center;
+}
+.barcode-display svg { display: block; max-width: 100%; }
+
 .divider { height: 1px; background: var(--border); margin: 14px 0; }
 
 /* ── AI SUGGESTION ── */
@@ -1194,9 +1204,12 @@ nav.tabs button .icon { font-size: 18px; }
 
       <div class="section-label">QR-Codes</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5;">
-        Druckt einen Bogen mit allen Behälter-QR-Codes (A4, 3 Spalten).
+        Druckt einen Bogen mit allen Behälter-Codes (A4) — als QR-Code oder Barcode (Code128).
       </div>
-      <button class="btn full" onclick="printQRCodes()">QR-Codes als Bogen öffnen</button>
+      <div class="btn-row">
+        <button class="btn full" onclick="printQRCodes()">QR-Code-Bogen drucken</button>
+        <button class="btn secondary full" onclick="printBarcodes()">Barcode-Bogen drucken</button>
+      </div>
 
       <div class="divider" style="margin:20px 0;"></div>
 
@@ -1362,8 +1375,19 @@ nav.tabs button .icon { font-size: 18px; }
     <div id="detailItems"></div>
     <button class="btn full" style="margin-top:12px;" onclick="openItemModal()">+ Item hinzufügen</button>
     <div style="margin-top:16px;">
-      <div class="section-label">QR-Code</div>
-      <div class="qr-display" id="detailQR"></div>
+      <div class="section-label">Codes</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;">
+        <div>
+          <div style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:0.14em;color:var(--muted-2);text-align:center;margin-bottom:4px;">QR-CODE</div>
+          <div class="qr-display" id="detailQR" style="margin:0;"></div>
+        </div>
+        <div>
+          <div style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:0.14em;color:var(--muted-2);text-align:center;margin-bottom:4px;">BARCODE</div>
+          <div class="barcode-display" id="detailBarcodeWrap">
+            <svg id="detailBarcode"></svg>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -2186,7 +2210,16 @@ async function openContainerDetail(id) {
 
   const qrContainer = document.getElementById('detailQR');
   qrContainer.innerHTML = '';
-  new QRCode(qrContainer, { text: 'GARAGE://' + c.code, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M });
+  new QRCode(qrContainer, { text: 'GARAGE://' + c.code, width: 148, height: 148, correctLevel: QRCode.CorrectLevel.M });
+
+  try {
+    const bcSvg = document.getElementById('detailBarcode');
+    JsBarcode(bcSvg, c.code, {
+      format: 'CODE128', lineColor: '#111111', background: '#ffffff',
+      width: 2.2, height: 60, displayValue: true,
+      font: 'monospace', fontSize: 13, textMargin: 4, margin: 6,
+    });
+  } catch(e) { document.getElementById('detailBarcodeWrap').style.display = 'none'; }
 
   await renderDetailItems();
   document.getElementById('modalDetail').classList.add('show');
@@ -2478,7 +2511,9 @@ async function startScanner() {
 
     // Primär: native BarcodeDetector API (Android Chrome – schnell, guter Fokus)
     if ('BarcodeDetector' in window) {
-      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      let detector;
+      try { detector = new BarcodeDetector({ formats: ['qr_code','code_128','code_39'] }); }
+      catch(e) { detector = new BarcodeDetector({ formats: ['qr_code'] }); }
       async function detectNative() {
         if (!scannerActive) return;
         try {
@@ -3186,6 +3221,37 @@ function printQRCodes() {
     new QRCode(document.getElementById('q'+i), { text: 'GARAGE://'+code, width: 130, height: 130, correctLevel: QRCode.CorrectLevel.M });
   });
   setTimeout(() => window.print(), 600);
+<\/script></body></html>`;
+  w.document.write(html);
+  w.document.close();
+}
+
+function printBarcodes() {
+  if (state.containers.length === 0) { toast('Keine Behälter zum Drucken', true); return; }
+  const w = window.open('', '_blank');
+  if (!w) { toast('Popup blockiert – bitte Popups erlauben', true); return; }
+  const codes = state.containers.map(c => ({ code: c.code, name: c.name }));
+  const html = `<!DOCTYPE html><html><head><title>Barcodes Findly</title>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
+<style>
+  @page { size: A4; margin: 10mm; }
+  body { font-family: -apple-system, sans-serif; margin: 0; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5mm; }
+  .label { border: 1px dashed #999; padding: 5mm 6mm; text-align: center; page-break-inside: avoid; }
+  .label .code { font-family: monospace; font-weight: bold; font-size: 13pt; margin-bottom: 3mm; letter-spacing: 0.08em; }
+  .label .name { font-size: 9pt; margin-top: 3mm; color: #444; word-wrap: break-word; }
+  .label svg { max-width: 100%; }
+  h1 { font-size: 13pt; margin: 0 0 6mm 0; }
+</style></head><body>
+<h1>Findly – Barcodes (Code128)</h1>
+<div class="grid">
+${codes.map((c, i) => `<div class="label"><div class="code">${c.code}</div><svg id="b${i}"></svg><div class="name">${c.name.replace(/</g,'&lt;')}</div></div>`).join('')}
+</div>
+<script>
+${JSON.stringify(codes)}.forEach((c,i) => {
+  JsBarcode('#b'+i, c.code, { format:'CODE128', lineColor:'#000', background:'#fff', width:2, height:55, displayValue:false, margin:4 });
+});
+setTimeout(() => window.print(), 800);
 <\/script></body></html>`;
   w.document.write(html);
   w.document.close();
