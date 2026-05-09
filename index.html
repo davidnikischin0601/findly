@@ -740,6 +740,31 @@ mark { background: var(--primary); color: var(--primary-ink); padding: 0 2px; bo
   margin-right: 5px;
 }
 
+/* ── ITEM DUST BUTTONS ── */
+.item-dust-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.item-dust-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0.75;
+  transition: opacity 0.1s;
+}
+.item-dust-btn:active { opacity: 1; transform: scale(0.92); }
+.item-dust-btn.sell { background: rgba(217,119,6,0.15); color: #d97706; }
+.item-dust-btn.trash { background: rgba(255,90,54,0.12); color: var(--danger); }
+
 /* ── DUST CARDS ── */
 .dust-card {
   background: var(--surface-2);
@@ -2254,9 +2279,22 @@ async function renderDetailItems() {
         <div class="name">${qtyPrefix}${escapeHtml(it.name)}${expiryBadge}${lentBadge}</div>
         <div class="sub"><span class="cat-pill">${it.category}</span>${formatAge(daysSince(it.lastUsed || it.created))}</div>
       </div>
+      <div class="item-dust-btns">
+        <button class="item-dust-btn sell" title="Zum Verkaufen" onclick="event.stopPropagation();quickDustAction('${it.id}','sell')">€</button>
+        <button class="item-dust-btn trash" title="Wegwerfen" onclick="event.stopPropagation();quickDustAction('${it.id}','trash')">🗑</button>
+      </div>
     `;
     list.appendChild(row);
   }
+}
+
+function quickDustAction(itemId, action) {
+  const it = state.items.find(x => x.id === itemId);
+  if (!it) return;
+  it.status = action;
+  it.lastUsed = Date.now();
+  saveState();
+  renderDetailItems();
 }
 
 function editCurrentContainer() {

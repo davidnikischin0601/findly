@@ -1,4 +1,4 @@
-const CACHE = 'findly-v6';
+const CACHE = 'findly-v8';
 const STATIC = [
   './manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js',
