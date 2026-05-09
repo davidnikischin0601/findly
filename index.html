@@ -2600,8 +2600,9 @@ function renderSearchFilters() {
   const wrap = document.getElementById('searchFilters');
   wrap.innerHTML = '';
   const rooms = state.rooms || [];
-  const cats = ['werkzeug','kfz','garten','sport','elektro','sonstiges'];
-  const catLabels = {'werkzeug':'Werkzeug','kfz':'KFZ','garten':'Garten','sport':'Sport','elektro':'Elektro','sonstiges':'Sonstiges'};
+  const fixedCats = ['werkzeug','kfz','garten','sport','saison','material','elektro','sonstiges'];
+  const fixedLabels = {'werkzeug':'Werkzeug','kfz':'KFZ','garten':'Garten','sport':'Sport / Rad','saison':'Saison','material':'Baumaterial','elektro':'Elektro','sonstiges':'Sonstiges'};
+  const allCats = [...fixedCats, ...(state.customCategories || [])];
 
   if (rooms.length > 0) {
     rooms.forEach(r => {
@@ -2614,10 +2615,10 @@ function renderSearchFilters() {
     const sep = document.createElement('div'); sep.style.cssText = 'width:100%;height:0;flex-basis:100%;';
     wrap.appendChild(sep);
   }
-  cats.forEach(cat => {
+  allCats.forEach(cat => {
     const chip = document.createElement('button');
     chip.className = 'filter-chip' + (searchFilterCat === cat ? ' active' : '');
-    chip.textContent = catLabels[cat] || cat;
+    chip.textContent = fixedLabels[cat] || cat;
     chip.onclick = () => { searchFilterCat = searchFilterCat === cat ? null : cat; renderSearch(); };
     wrap.appendChild(chip);
   });
@@ -2640,6 +2641,50 @@ async function renderSearch() {
   renderSearchFilters();
 
   if (q.length < 2) {
+    // If a filter chip is active, show filtered items instead of recent list
+    if (searchFilterCat || searchFilterRoom) {
+      let filtered = state.items.filter(i => i.status === 'active');
+      if (searchFilterCat) filtered = filtered.filter(i => i.category === searchFilterCat);
+      if (searchFilterRoom) filtered = filtered.filter(i => i.roomId === searchFilterRoom);
+      filtered = filtered.sort((a, b) => escapeHtml(a.name).localeCompare(escapeHtml(b.name)));
+      const label = document.createElement('div');
+      label.className = 'section-label'; label.style.marginBottom = '10px';
+      const parts = [searchFilterCat, searchFilterRoom ? (state.rooms||[]).find(r=>r.id===searchFilterRoom)?.name : null].filter(Boolean);
+      label.textContent = parts.join(' · ') + ` (${filtered.length})`;
+      out.appendChild(label);
+      if (filtered.length === 0) {
+        out.innerHTML += `<div class="empty"><div class="text">KEINE ITEMS IN DIESER KATEGORIE</div></div>`;
+        return;
+      }
+      for (const it of filtered) {
+        const c = state.containers.find(x => x.id === it.containerId);
+        const photo = await getPhotoUrl(it);
+        const div = document.createElement('div'); div.className = 'search-result';
+        div.onclick = async () => {
+          if (!c) return;
+          closeAllModals(); await openContainerDetail(c.id);
+          setTimeout(() => {
+            document.querySelectorAll('#detailItems .item-row').forEach(row => {
+              if (row.dataset.itemId === it.id) {
+                row.style.outline = '2px solid var(--primary)';
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                setTimeout(() => { row.style.outline = ''; }, 2000);
+              }
+            });
+          }, 350);
+        };
+        div.innerHTML = `
+          <div class="thumb" ${photo ? `style="background-image:url(${photo})"` : ''}></div>
+          <div class="info">
+            <div class="item-name">${escapeHtml(it.name)}</div>
+            <div class="container-name">${c ? escapeHtml(c.name) : '—'}</div>
+            <div class="location">◈ ${c ? c.code + (c.location ? ' · ' + escapeHtml(c.location) : '') : '—'}</div>
+          </div>`;
+        out.appendChild(div);
+      }
+      return;
+    }
+
     // Show search history chips
     try {
       const history = JSON.parse(localStorage.getItem('garage_search_history') || '[]');
