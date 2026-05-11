@@ -381,6 +381,7 @@ button.icon-btn:hover { background: var(--surface-3); color: var(--ink); }
 .hex-cell:hover { opacity: 0.85; }
 .hex-cell.filled { background: var(--primary); }
 .hex-cell.partial { background: var(--amber); }
+.hex-cell.watch-fill { background: var(--amber); }
 .hex-cell.empty { background: var(--surface-3); }
 .hex-cell.warn { background: var(--danger); }
 .hex-cell.add-hex { background: transparent; border: none; cursor: pointer; }
@@ -1031,6 +1032,42 @@ nav.tabs button .icon { font-size: 18px; }
 .badge-expiry { display:inline-block; font-size:9px; font-family:'JetBrains Mono',monospace; letter-spacing:0.06em; padding:1px 5px; border-radius:3px; background:rgba(255,90,54,0.18); color:var(--danger); margin-left:6px; }
 .badge-lent { display:inline-block; font-size:9px; font-family:'JetBrains Mono',monospace; letter-spacing:0.06em; padding:1px 5px; border-radius:3px; background:rgba(255,163,25,0.18); color:var(--amber); margin-left:6px; }
 .badge-qty { display:inline-block; font-size:10px; font-weight:700; color:var(--primary); margin-right:3px; font-family:'JetBrains Mono',monospace; }
+
+/* ── FILL CARD (Überfüllungs-Erkennung) ── */
+.fill-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 12px; }
+.fill-card-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.16em; color: var(--muted-2); text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.fill-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.fill-row strong { color: var(--ink-2); }
+.fill-bar-wrap { height: 6px; background: var(--surface-3); border-radius: 3px; overflow: hidden; margin: 6px 0; }
+.fill-bar-inner { height: 100%; border-radius: 3px; background: var(--success); transition: width 0.3s; }
+.fill-bar-inner.watch { background: var(--amber); }
+.fill-bar-inner.over { background: var(--danger); }
+.fill-warning { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: var(--radius-sm); font-size: 12px; margin-top: 8px; }
+.fill-warning.watch { background: rgba(255,163,25,0.10); border: 1px solid rgba(255,163,25,0.28); color: var(--amber); }
+.fill-warning.over  { background: rgba(255,90,54,0.10);  border: 1px solid rgba(255,90,54,0.28);  color: var(--danger); }
+.fill-warning button { background: none; border: 1px solid currentColor; color: inherit; padding: 4px 10px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.08em; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; }
+.fill-stale { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em; color: var(--amber); margin-top: 6px; }
+/* ── COMPARE SLIDER ── */
+.compare-wrap { position: relative; width: 100%; aspect-ratio: 4/3; overflow: hidden; border-radius: var(--radius); background: var(--surface-3); user-select: none; touch-action: none; }
+.compare-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.compare-after { z-index: 2; }
+.compare-divider { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.85); z-index: 3; transform: translateX(-50%); pointer-events: none; }
+.compare-handle { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 28px; height: 28px; background: rgba(255,255,255,0.9); border-radius: 50%; display: grid; place-items: center; font-size: 11px; color: #000; z-index: 4; cursor: ew-resize; }
+.compare-lbl { position: absolute; bottom: 8px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em; padding: 2px 6px; border-radius: 3px; z-index: 5; pointer-events: none; background: rgba(0,0,0,0.65); color: #fff; }
+.compare-lbl.l { left: 8px; }
+.compare-lbl.r { right: 8px; }
+/* ── SUGGESTIONS (KI-Vorschläge) ── */
+.suggestion-card { background: linear-gradient(135deg, rgba(255,214,10,0.07), rgba(255,214,10,0.02)); border: 1px solid rgba(255,214,10,0.25); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; }
+.suggestion-card .sg-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.18em; color: var(--primary); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+.suggestion-card .sg-text { font-size: 13px; color: var(--ink-2); line-height: 1.5; margin-bottom: 8px; }
+.suggestion-card .sg-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.sg-btn { background: none; border: 1px solid var(--border-2); color: var(--muted); padding: 5px 10px; font-size: 10px; border-radius: var(--radius-sm); cursor: pointer; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.06em; transition: all 0.12s; text-transform: uppercase; }
+.sg-btn:hover { color: var(--ink-2); border-color: var(--muted-2); }
+.sg-btn.accent { border-color: rgba(255,214,10,0.4); color: var(--primary); }
+.sg-btn.accent:hover { background: rgba(255,214,10,0.08); }
+/* ── CAP UNIT TOGGLE ── */
+.cap-unit-toggle button { background: none; border: none; color: var(--muted); padding: 6px 10px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.06em; cursor: pointer; transition: all 0.12s; }
+.cap-unit-toggle button.active { background: var(--surface-3); color: var(--ink); }
 </style>
 </head>
 <body>
@@ -1138,9 +1175,9 @@ nav.tabs button .icon { font-size: 18px; }
         <div class="hex-grid" id="hexGrid"></div>
         <div class="hex-legend">
           <div class="hex-legend-item"><div class="hex-legend-dot" style="background:var(--primary)"></div>Gefüllt</div>
-          <div class="hex-legend-item"><div class="hex-legend-dot" style="background:var(--amber)"></div>Teilweise</div>
+          <div class="hex-legend-item"><div class="hex-legend-dot" style="background:var(--amber)"></div>Teilweise / Fast voll</div>
           <div class="hex-legend-item"><div class="hex-legend-dot" style="background:var(--surface-3)"></div>Leer</div>
-          <div class="hex-legend-item"><div class="hex-legend-dot" style="background:var(--danger)"></div>Ablauf</div>
+          <div class="hex-legend-item"><div class="hex-legend-dot" style="background:var(--danger)"></div>Ablauf / Überfüllt</div>
         </div>
       </div>
 
@@ -1151,6 +1188,12 @@ nav.tabs button .icon { font-size: 18px; }
           <span id="lastSync" style="font-size:9px;color:var(--muted-2);"></span>
         </div>
         <div id="containerGrid" class="container-list"></div>
+      </div>
+
+      <!-- KI-Vorschläge -->
+      <div id="suggestionsSection" style="display:none; margin-top:20px;">
+        <div class="section-label">KI-Vorschläge</div>
+        <div id="suggestionsList"></div>
       </div>
     </div>
 
@@ -1311,11 +1354,23 @@ nav.tabs button .icon { font-size: 18px; }
       <span class="modal-title" id="containerModalTitle">Neuer Behälter</span>
       <button class="modal-close" onclick="closeModal('modalContainer')">×</button>
     </div>
+    <div style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:0.16em;color:var(--muted-2);text-transform:uppercase;margin-bottom:6px;">Soll-Foto (für Überfüllungs-Erkennung)</div>
     <label class="photo-input" id="containerPhotoInput">
       <input type="file" accept="image/*" capture="environment" id="containerPhotoFile">
-      <div class="placeholder"><div class="icon">⌂</div><div>FOTO VOM SOLLZUSTAND</div></div>
+      <div class="placeholder"><div class="icon">⌂</div><div>SOLL-ZUSTAND FOTOGRAFIEREN</div></div>
     </label>
     <div class="field" style="margin-top:14px;">
+      <label>Kapazität (optional)</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="number" id="containerCapacityInput" min="1" placeholder="z.B. 30" style="width:90px;flex-shrink:0;">
+        <div class="cap-unit-toggle" style="display:flex;border:1px solid var(--border-2);border-radius:var(--radius);overflow:hidden;">
+          <button type="button" id="capUnitItems" class="active" onclick="setCapUnit('items')">Stückzahl</button>
+          <button type="button" id="capUnitVolume" onclick="setCapUnit('volume')">Füllgrad %</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted-2);margin-top:6px;line-height:1.5;">Leer lassen für unbekannte Kapazität. Stückzahl funktioniert gut bei wenigen großen Items, % bei vielen Kleinteilen.</div>
+    </div>
+    <div class="field" style="margin-top:6px;">
       <label>Standortfoto (optional)</label>
     </div>
     <label class="photo-input" id="containerLocationPhotoInput" style="aspect-ratio:16/9;">
@@ -1394,6 +1449,8 @@ nav.tabs button .icon { font-size: 18px; }
       <span>KI: Organisations-Tipp holen</span>
     </button>
     <div class="divider"></div>
+    <!-- Füllstand-Karte -->
+    <div id="detailFillCard"></div>
     <div class="section-label">
       <span>Inhalt <span class="count" id="detailItemCount">0</span></span>
     </div>
@@ -1529,6 +1586,26 @@ nav.tabs button .icon { font-size: 18px; }
   </div>
 </div>
 
+<!-- ── MODAL: VERGLEICH (Soll/Ist Slider) ── -->
+<div class="modal-bg" id="modalCompare">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Füllstand-Vergleich</span>
+      <button class="modal-close" onclick="closeModal('modalCompare')">×</button>
+    </div>
+    <div id="compareWrap" class="compare-wrap" style="cursor:ew-resize;"></div>
+    <div style="font-size:12px;color:var(--muted);margin-top:10px;text-align:center;line-height:1.5;">Schiebe den Teiler, um Soll- und Ist-Zustand zu vergleichen</div>
+    <div id="compareSpinner" style="display:none;text-align:center;padding:12px;">
+      <span class="spinner"></span>
+      <span style="font-size:12px;color:var(--muted);margin-left:8px;">KI analysiert…</span>
+    </div>
+    <div id="compareFillResult" style="display:none;margin-top:10px;"></div>
+    <div style="margin-top:12px;">
+      <button class="btn secondary full" id="checkFillBtn" onclick="triggerFillCheck()">Füllstand jetzt prüfen (KI)</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── CONFIRM DIALOG ── -->
 <div class="modal-bg" id="confirmDialogModal">
   <div class="modal" style="max-height:auto;">
@@ -1570,8 +1647,10 @@ let state = {
   containers: [],
   items: [],
   customCategories: [],
+  suggestions: [],
   apiKey: ''
 };
+let _capUnit = 'items'; // aktueller Kapazitäts-Einheiten-Toggle im Container-Modal
 let _stateVersion = 0;
 
 let editingContainer = null;
@@ -1669,6 +1748,7 @@ function loadLocalState() {
       state.containers = parsed.containers || [];
       state.items = parsed.items || [];
       state.customCategories = parsed.customCategories || [];
+      state.suggestions = parsed.suggestions || [];
     } catch (e) { console.error(e); }
   }
   state.apiKey = sessionStorage.getItem('garage_api_key') || '';
@@ -1707,7 +1787,8 @@ async function syncFromFirebase() {
       if (rooms.length > 0) state.rooms = rooms;
       state.containers = toArr(data.containers);
       state.items = toArr(data.items);
-      localStorage.setItem('garage_state', JSON.stringify({ rooms: state.rooms, containers: state.containers, items: state.items }));
+      state.suggestions = toArr(data.suggestions);
+      localStorage.setItem('garage_state', JSON.stringify({ rooms: state.rooms, containers: state.containers, items: state.items, suggestions: state.suggestions }));
       return true;
     }
     return false;
@@ -1720,7 +1801,7 @@ async function syncFromFirebase() {
 
 function saveState() {
   _stateVersion++;
-  const data = { rooms: state.rooms, containers: state.containers, items: state.items, customCategories: state.customCategories };
+  const data = { rooms: state.rooms, containers: state.containers, items: state.items, customCategories: state.customCategories, suggestions: state.suggestions };
   localStorage.setItem('garage_state', JSON.stringify(data));
   fbRef.set(data)
     .then(() => setSyncStatus(true))
@@ -1885,7 +1966,8 @@ async function renderHexGrid() {
         const cont = containers[idx];
         const itemCount = state.items.filter(i => i.containerId === cont.id && i.status === 'active').length;
         const isDust = state.items.some(i => i.containerId === cont.id && i.status === 'active' && daysSince(i.lastUsed || i.created) >= 180);
-        const cls = isDust ? 'warn' : itemCount === 0 ? 'empty' : itemCount < 5 ? 'partial' : 'filled';
+        const flag = cont.overfillFlag;
+        const cls = flag === 'over' ? 'warn' : flag === 'watch' ? 'watch-fill' : isDust ? 'warn' : itemCount === 0 ? 'empty' : itemCount < 5 ? 'partial' : 'filled';
         const cell = document.createElement('div');
         cell.className = `hex-cell ${cls}`;
         cell.onclick = () => openContainerDetail(cont.id);
@@ -1928,6 +2010,8 @@ async function renderListView() {
     const isWarn = days !== null && days > 180;
     const photo = await getPhotoUrl(c);
 
+    const flag = c.overfillFlag;
+    const flagBadge = flag === 'over' ? `<span style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:0.06em;padding:1px 5px;border-radius:3px;background:rgba(255,90,54,0.18);color:var(--danger);margin-left:5px;">VOLL</span>` : flag === 'watch' ? `<span style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:0.06em;padding:1px 5px;border-radius:3px;background:rgba(255,163,25,0.18);color:var(--amber);margin-left:5px;">~VOLL</span>` : '';
     const row = document.createElement('div');
     row.className = 'container-row';
     row.onclick = () => openContainerDetail(c.id);
@@ -1937,7 +2021,7 @@ async function renderListView() {
       </div>
       <div class="row-code">${c.code}</div>
       <div class="row-body">
-        <div class="row-name">${escapeHtml(c.name)}</div>
+        <div class="row-name">${escapeHtml(c.name)}${flagBadge}</div>
         <div class="row-meta ${isWarn ? 'warn' : ''}">${c.location || 'kein Standort'} · ${formatAge(days)}</div>
       </div>
       <div class="row-badge">${itemCount} obj</div>
@@ -2072,6 +2156,7 @@ async function renderOverview() {
 
   await renderHexGrid();
   if (viewMode === 'liste') await renderListView();
+  renderSuggestions();
 }
 
 function escapeHtml(s) { return (s||'').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -2089,6 +2174,9 @@ function openContainerModal(id = null) {
   document.getElementById('containerNameInput').value = c ? c.name : '';
   document.getElementById('containerLocationInput').value = c ? (c.location || '') : '';
   document.getElementById('deleteContainerBtn').style.display = c ? 'flex' : 'none';
+  document.getElementById('containerCapacityInput').value = (c && c.capacity != null) ? c.capacity : '';
+  _capUnit = (c && c.capacityUnit) ? c.capacityUnit : 'items';
+  setCapUnit(_capUnit);
 
   const photoInput = document.getElementById('containerPhotoInput');
   photoInput.style.backgroundImage = '';
@@ -2161,6 +2249,8 @@ async function saveContainer() {
   const location = document.getElementById('containerLocationInput').value.trim();
   const photoData = document.getElementById('containerPhotoInput').dataset.photoData;
   const locPhotoData = document.getElementById('containerLocationPhotoInput').dataset.photoData;
+  const capRaw = document.getElementById('containerCapacityInput').value.trim();
+  const capacity = capRaw !== '' ? Math.max(1, parseInt(capRaw) || 1) : null;
 
   if (!code || !name) { toast('ID und Name sind nötig', true); return; }
 
@@ -2170,6 +2260,7 @@ async function saveContainer() {
   if (editingContainer) {
     const c = state.containers.find(x => x.id === editingContainer);
     c.code = code; c.name = name; c.location = location;
+    c.capacity = capacity; c.capacityUnit = _capUnit;
     if (photoData) {
       const photoKey = c.photoKey || `c_${c.id}`;
       await savePhoto(photoKey, photoData);
@@ -2180,13 +2271,16 @@ async function saveContainer() {
       await savePhoto(locKey, locPhotoData);
       c.locationPhotoKey = locKey;
     }
+    updateOverfillFlag(c);
   } else {
     const id = uid();
     const photoKey = photoData ? `c_${id}` : null;
     const locKey = locPhotoData ? `cl_${id}` : null;
     if (photoData) await savePhoto(photoKey, photoData);
     if (locPhotoData) await savePhoto(locKey, locPhotoData);
-    state.containers.push({ id, code, name, location, photoKey, locationPhotoKey: locKey, roomId: currentRoomId, created: Date.now(), lastAccessed: Date.now() });
+    const newC = { id, code, name, location, capacity, capacityUnit: _capUnit, photoKey, locationPhotoKey: locKey, fillScore: null, overfillFlag: null, roomId: currentRoomId, created: Date.now(), lastAccessed: Date.now() };
+    updateOverfillFlag(newC);
+    state.containers.push(newC);
   }
 
   saveState();
@@ -2205,6 +2299,7 @@ async function deleteContainer() {
   for (const it of itemsToDelete) if (it.photoKey) await deletePhoto(it.photoKey);
   state.items = state.items.filter(i => i.containerId !== editingContainer);
   state.containers = state.containers.filter(x => x.id !== editingContainer);
+  state.suggestions = state.suggestions.filter(s => s.containerId !== editingContainer);
   saveState();
   closeModal('modalContainer');
   renderOverview();
@@ -2258,6 +2353,7 @@ async function openContainerDetail(id) {
     });
   } catch(e) { document.getElementById('detailBarcodeWrap').style.display = 'none'; }
 
+  renderDetailFillCard();
   await renderDetailItems();
   document.getElementById('modalDetail').classList.add('show');
 }
@@ -2304,8 +2400,10 @@ function quickDustAction(itemId, action) {
   if (!it) return;
   it.status = action;
   it.lastUsed = Date.now();
+  if (currentContainer) updateOverfillFlag(currentContainer);
   saveState();
   renderDetailItems();
+  renderDetailFillCard();
 }
 
 function editCurrentContainer() {
@@ -2516,9 +2614,15 @@ async function saveItem() {
       photoKey, status: 'active',
       created: Date.now(), lastUsed: Date.now()
     });
+    updateOverfillFlag(currentContainer);
     saveState();
     closeModal('modalItem');
     await renderDetailItems();
+    renderDetailFillCard();
+    // Trigger KI-Foto-Vergleich wenn Soll-Foto vorhanden + neues Item-Foto
+    if (photoData && currentContainer.photoKey) {
+      triggerAutoFillCheck(currentContainer, photoData);
+    }
   }
 }
 
@@ -3145,6 +3249,359 @@ async function dustAction(itemId, action) {
 }
 
 // ============================================================
+//   KAPAZITÄTS-TOGGLE
+// ============================================================
+
+function setCapUnit(unit) {
+  _capUnit = unit;
+  document.getElementById('capUnitItems').classList.toggle('active', unit === 'items');
+  document.getElementById('capUnitVolume').classList.toggle('active', unit === 'volume');
+}
+
+// ============================================================
+//   ÜBERFÜLLUNGS-ERKENNUNG
+// ============================================================
+
+function computeOverfillFlag(container, items) {
+  const ORDER = { ok: 0, watch: 1, over: 2 };
+  const worst = (a, b) => {
+    if (a === null) return b;
+    if (b === null) return a;
+    return ORDER[a] >= ORDER[b] ? a : b;
+  };
+
+  let countSignal = null;
+  if (container.capacity != null && container.capacity > 0) {
+    const activeCount = items.filter(i => i.containerId === container.id && i.status === 'active').length;
+    const ratio = activeCount / container.capacity;
+    countSignal = ratio > 1.0 ? 'over' : ratio > 0.85 ? 'watch' : 'ok';
+  }
+
+  let photoSignal = null;
+  const fs = container.fillScore;
+  if (fs && typeof fs.confidence === 'number' && fs.confidence >= 0.6) {
+    photoSignal = fs.value > 1.15 ? 'over' : fs.value > 1.02 ? 'watch' : 'ok';
+  }
+
+  if (countSignal === null && photoSignal === null) return null;
+  return worst(countSignal, photoSignal);
+}
+
+function updateOverfillFlag(container) {
+  const prev = container.overfillFlag;
+  container.overfillFlag = computeOverfillFlag(container, state.items);
+  if (container.overfillFlag === 'over') {
+    const existing = (state.suggestions || []).find(s => s.containerId === container.id && s.type === 'overfill' && s.status === 'open');
+    if (!existing) {
+      if (!state.suggestions) state.suggestions = [];
+      state.suggestions.push({ id: uid(), type: 'overfill', containerId: container.id, createdAt: Date.now(), status: 'open' });
+    }
+  }
+}
+
+async function assessOverfill(referenceDataUrl, currentDataUrl) {
+  if (!state.apiKey) return null;
+  try {
+    const toSrc = url => ({ type: 'base64', media_type: 'image/jpeg', data: url.split(',')[1] });
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': state.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 200,
+        system: 'Bewerte, wie viel voller der Behälter im aktuellen Bild gegenüber dem Referenzbild ist. Antworte ausschließlich als JSON ohne Markdown: {"value": <float 0-1.5>, "confidence": <float 0-1>, "note": "<kurze deutsche Begründung>"}. 1.0 = identisch voll. >1.1 = deutlich voller. <0.9 = leerer.',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Referenzbild (Soll-Zustand):' },
+            { type: 'image', source: toSrc(referenceDataUrl) },
+            { type: 'text', text: 'Aktuelles Bild (Ist-Zustand):' },
+            { type: 'image', source: toSrc(currentDataUrl) }
+          ]
+        }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    let txt = (data.content[0].text || '').trim().replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(txt);
+    if (typeof parsed.value !== 'number' || typeof parsed.confidence !== 'number') return null;
+    return { value: parsed.value, confidence: parsed.confidence, timestamp: Date.now(), note: parsed.note || '' };
+  } catch (e) {
+    console.warn('assessOverfill:', e);
+    return null;
+  }
+}
+
+async function triggerAutoFillCheck(container, itemPhotoDataUrl) {
+  // Automatischer Check beim Item hinzufügen — nur wenn Soll-Foto vorhanden und API-Key gesetzt
+  if (!state.apiKey || !container.photoKey) return;
+  const refUrl = await loadPhoto(container.photoKey);
+  if (!refUrl) return;
+  const score = await assessOverfill(refUrl, itemPhotoDataUrl);
+  if (!score) return;
+  container.fillScore = score;
+  updateOverfillFlag(container);
+  saveState();
+  renderDetailFillCard();
+  renderSuggestions();
+}
+
+// ============================================================
+//   FILL CARD UI
+// ============================================================
+
+function renderDetailFillCard() {
+  const wrap = document.getElementById('detailFillCard');
+  if (!wrap || !currentContainer) { if(wrap) wrap.innerHTML = ''; return; }
+  const c = currentContainer;
+  const activeItems = state.items.filter(i => i.containerId === c.id && i.status === 'active');
+  const flag = c.overfillFlag;
+  const fs = c.fillScore;
+  const hasCapacity = c.capacity != null && c.capacity > 0;
+  const hasScore = fs && typeof fs.confidence === 'number' && fs.confidence >= 0.6;
+  const isStale = fs && (Date.now() - fs.timestamp) > 30 * 24 * 60 * 60 * 1000;
+
+  if (!hasCapacity && !hasScore) { wrap.innerHTML = ''; return; }
+
+  let html = '<div class="fill-card">';
+  html += '<div class="fill-card-label"><span>Füllstand</span>';
+  if (flag === 'watch' || flag === 'over') {
+    html += `<button class="fill-warning ${flag}" onclick="openCompareModal()" style="border:none;cursor:pointer;padding:3px 8px;font-size:9px;font-family:\'JetBrains Mono\',monospace;letter-spacing:0.08em;">Vergleichen</button>`;
+  }
+  html += '</div>';
+
+  if (hasCapacity) {
+    const ratio = Math.min(1.2, activeItems.length / c.capacity);
+    const pct = Math.round(ratio * 100);
+    const barClass = ratio > 1 ? 'over' : ratio > 0.85 ? 'watch' : '';
+    const unitLabel = c.capacityUnit === 'volume' ? '%' : ' Items';
+    html += `<div class="fill-row"><span>Stückzahl</span><strong>${activeItems.length} / ${c.capacity}${unitLabel}</strong></div>`;
+    html += `<div class="fill-bar-wrap"><div class="fill-bar-inner ${barClass}" style="width:${Math.min(100, pct)}%"></div></div>`;
+  }
+
+  if (hasScore) {
+    const scorePct = Math.round((fs.value - 1) * 100);
+    const scoreText = scorePct > 0 ? `+${scorePct}% voller als Soll` : scorePct < 0 ? `${scorePct}% leerer als Soll` : 'identisch voll';
+    const scoreDate = new Date(fs.timestamp).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    html += `<div class="fill-row" style="margin-top:6px;"><span>KI-Foto-Score</span><strong>${scoreText}</strong></div>`;
+    html += `<div style="font-size:10px;color:var(--muted-2);font-family:\'JetBrains Mono\',monospace;margin-top:2px;">${escapeHtml(fs.note)} · ${scoreDate}</div>`;
+    if (isStale) html += `<div class="fill-stale">⚠ Score veraltet — bitte neu prüfen</div>`;
+  }
+
+  if (flag === 'watch' || flag === 'over') {
+    const flagLabel = flag === 'over' ? '⚠ Behälter überfüllt' : '● Behälter fast voll';
+    html += `<div class="fill-warning ${flag}"><span>${flagLabel}</span><button onclick="openCompareModal()">Vergleichen</button></div>`;
+  }
+
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+async function openCompareModal() {
+  if (!currentContainer) return;
+  const wrap = document.getElementById('compareWrap');
+  wrap.innerHTML = '<div style="display:grid;place-items:center;height:100%;color:var(--muted-2);font-size:12px;">Fotos werden geladen…</div>';
+  document.getElementById('compareFillResult').style.display = 'none';
+  document.getElementById('modalCompare').classList.add('show');
+
+  const refUrl = currentContainer.photoKey ? await loadPhoto(currentContainer.photoKey) : null;
+  // Aktuellstes Item-Foto als Ist-Bild
+  const itemsWithPhoto = state.items
+    .filter(i => i.containerId === currentContainer.id && i.status === 'active' && i.photoKey)
+    .sort((a, b) => (b.lastUsed || b.created) - (a.lastUsed || a.created));
+  const curUrl = itemsWithPhoto.length > 0 ? await loadPhoto(itemsWithPhoto[0].photoKey) : null;
+
+  if (!refUrl) {
+    wrap.innerHTML = '<div style="display:grid;place-items:center;height:100%;color:var(--muted-2);font-size:12px;">Kein Soll-Foto vorhanden</div>';
+    return;
+  }
+  if (!curUrl) {
+    wrap.innerHTML = `<img src="${refUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius);">
+      <div style="padding:10px;font-size:12px;color:var(--muted);text-align:center;">Kein Ist-Foto vorhanden — füge zuerst ein Item mit Foto hinzu.</div>`;
+    return;
+  }
+
+  // Slider aufbauen
+  buildCompareSlider(wrap, refUrl, curUrl);
+}
+
+function buildCompareSlider(wrap, beforeUrl, afterUrl) {
+  wrap.innerHTML = '';
+  const before = document.createElement('img');
+  before.src = beforeUrl; before.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;';
+  const afterContainer = document.createElement('div');
+  afterContainer.style.cssText = 'position:absolute;inset:0;z-index:2;overflow:hidden;';
+  const after = document.createElement('img');
+  after.src = afterUrl; after.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
+  afterContainer.appendChild(after);
+  const divider = document.createElement('div'); divider.className = 'compare-divider';
+  const handle = document.createElement('div'); handle.className = 'compare-handle'; handle.textContent = '↔';
+  const lblL = document.createElement('div'); lblL.className = 'compare-lbl l'; lblL.textContent = 'SOLL';
+  const lblR = document.createElement('div'); lblR.className = 'compare-lbl r'; lblR.textContent = 'IST';
+  wrap.appendChild(before); wrap.appendChild(afterContainer); wrap.appendChild(divider); wrap.appendChild(handle);
+  wrap.appendChild(lblL); wrap.appendChild(lblR);
+
+  let pos = 0.5;
+  function update(x) {
+    const rect = wrap.getBoundingClientRect();
+    pos = Math.max(0.02, Math.min(0.98, (x - rect.left) / rect.width));
+    const pct = (pos * 100).toFixed(1) + '%';
+    afterContainer.style.clipPath = `inset(0 ${(100 - pos*100).toFixed(1)}% 0 0)`;
+    divider.style.left = pct; handle.style.left = pct;
+  }
+  update(wrap.getBoundingClientRect().left + wrap.getBoundingClientRect().width * 0.5);
+
+  wrap.addEventListener('mousedown', e => {
+    const move = ev => update(ev.clientX);
+    const up   = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+    update(e.clientX);
+  });
+  wrap.addEventListener('touchstart', e => {
+    const move = ev => { e.preventDefault(); update(ev.touches[0].clientX); };
+    const up   = () => { document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up); };
+    document.addEventListener('touchmove', move, { passive: false }); document.addEventListener('touchend', up);
+    update(e.touches[0].clientX);
+  }, { passive: true });
+}
+
+async function triggerFillCheck() {
+  if (!currentContainer) return;
+  if (!state.apiKey) { toast('Bitte API-Key in Einstellungen hinterlegen', true); return; }
+  const refUrl = currentContainer.photoKey ? await loadPhoto(currentContainer.photoKey) : null;
+  if (!refUrl) { toast('Kein Soll-Foto vorhanden', true); return; }
+
+  // Ist-Bild: aktuellstes Item-Foto
+  const itemsWithPhoto = state.items
+    .filter(i => i.containerId === currentContainer.id && i.status === 'active' && i.photoKey)
+    .sort((a, b) => (b.lastUsed || b.created) - (a.lastUsed || a.created));
+  if (itemsWithPhoto.length === 0) { toast('Kein Ist-Foto vorhanden — füge ein Item mit Foto hinzu', true); return; }
+  const curUrl = await loadPhoto(itemsWithPhoto[0].photoKey);
+  if (!curUrl) return;
+
+  const btn = document.getElementById('checkFillBtn');
+  const spinner = document.getElementById('compareSpinner');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span><span> Analysiere…</span>';
+  spinner.style.display = 'block';
+
+  const score = await assessOverfill(refUrl, curUrl);
+  btn.disabled = false; btn.textContent = 'Füllstand jetzt prüfen (KI)';
+  spinner.style.display = 'none';
+
+  if (!score) { toast('KI-Bewertung fehlgeschlagen', true); return; }
+
+  currentContainer.fillScore = score;
+  updateOverfillFlag(currentContainer);
+  saveState();
+  renderDetailFillCard();
+  renderSuggestions();
+
+  const resultEl = document.getElementById('compareFillResult');
+  const scorePct = Math.round((score.value - 1) * 100);
+  const scoreText = scorePct > 0 ? `+${scorePct}% voller als Soll` : scorePct < 0 ? `${scorePct}% leerer als Soll` : 'identisch voll';
+  resultEl.innerHTML = `<div class="fill-card" style="margin:0;"><div class="fill-card-label">KI-Ergebnis</div><div class="fill-row"><span>${scoreText}</span><strong>Konfidenz ${Math.round(score.confidence*100)}%</strong></div><div style="font-size:12px;color:var(--muted-2);margin-top:4px;">${escapeHtml(score.note)}</div></div>`;
+  resultEl.style.display = 'block';
+  buildCompareSlider(document.getElementById('compareWrap'), refUrl, curUrl);
+}
+
+// ============================================================
+//   KI-VORSCHLÄGE
+// ============================================================
+
+function renderSuggestions() {
+  if (!state.suggestions) state.suggestions = [];
+  const section = document.getElementById('suggestionsSection');
+  const list = document.getElementById('suggestionsList');
+  if (!section || !list) return;
+
+  const open = state.suggestions.filter(s => s.status === 'open' && state.containers.find(c => c.id === s.containerId));
+  section.style.display = open.length > 0 ? 'block' : 'none';
+  list.innerHTML = '';
+
+  open.forEach(sg => {
+    const c = state.containers.find(x => x.id === sg.containerId);
+    if (!c) return;
+    const itemCount = state.items.filter(i => i.containerId === c.id && i.status === 'active').length;
+    const card = document.createElement('div');
+    card.className = 'suggestion-card';
+    card.innerHTML = `
+      <div class="sg-label">⚠ Überfüllt</div>
+      <div class="sg-text">Behälter <strong>${escapeHtml(c.code)} – ${escapeHtml(c.name)}</strong> ist überfüllt (${itemCount} Items${c.capacity ? ' / ' + c.capacity : ''}). Aufteilen oder Kapazität anpassen.</div>
+      <div class="sg-actions">
+        <button class="sg-btn accent" onclick="splitContainerSuggestion('${sg.id}')">Aufteilen vorschlagen</button>
+        <button class="sg-btn" onclick="openContainerDetail('${c.id}')">Öffnen</button>
+        <button class="sg-btn" onclick="dismissSuggestion('${sg.id}')">Ignorieren</button>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function dismissSuggestion(id) {
+  const sg = (state.suggestions || []).find(s => s.id === id);
+  if (sg) { sg.status = 'dismissed'; saveState(); renderSuggestions(); }
+}
+
+async function splitContainerSuggestion(suggestionId) {
+  const sg = (state.suggestions || []).find(s => s.id === suggestionId);
+  if (!sg || !state.apiKey) { toast('API-Key nötig für Aufteilungs-Vorschlag', true); return; }
+  const c = state.containers.find(x => x.id === sg.containerId);
+  if (!c) return;
+
+  const items = state.items.filter(i => i.containerId === c.id && i.status === 'active');
+  if (items.length < 2) { toast('Zu wenig Items zum Aufteilen', true); return; }
+
+  const btn = document.querySelector(`[onclick="splitContainerSuggestion('${suggestionId}')"]`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Analysiere…'; }
+
+  const itemList = items.map(i => `${i.name} (${i.category})`).join(', ');
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5', max_tokens: 400,
+        system: 'Du bist ein Ordnungs-Assistent. Teile die gegebene Item-Liste sinnvoll in genau 2 Gruppen auf. Antworte NUR als JSON: {"gruppe1": {"name": "<Gruppenname>", "items": ["<item1>",...]}, "gruppe2": {"name": "<Gruppenname>", "items": ["<item1>",...]}}',
+        messages: [{ role: 'user', content: `Behälter "${c.name}" mit diesen Items aufteilen: ${itemList}` }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    let txt = (data.content[0].text || '').trim().replace(/```json|```/g, '').trim();
+    const plan = JSON.parse(txt);
+
+    if (await confirmDialog(
+      `Vorschlag:\n\nGruppe 1 „${plan.gruppe1.name}": ${plan.gruppe1.items.join(', ')}\n\nGruppe 2 „${plan.gruppe2.name}": ${plan.gruppe2.items.join(', ')}\n\nNeuen Behälter anlegen und Items aufteilen?`,
+      'Aufteilen'
+    )) {
+      const newId = uid();
+      const newCode = suggestNextCode();
+      state.containers.push({ id: newId, code: newCode, name: plan.gruppe2.name, location: c.location, capacity: null, capacityUnit: 'items', photoKey: null, locationPhotoKey: null, fillScore: null, overfillFlag: null, roomId: c.roomId || currentRoomId, created: Date.now(), lastAccessed: Date.now() });
+      items.forEach(it => {
+        if (plan.gruppe2.items.some(n => it.name.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase().includes(it.name.toLowerCase()))) {
+          it.containerId = newId;
+        }
+      });
+      state.containers.find(x => x.id === c.id).name = plan.gruppe1.name;
+      updateOverfillFlag(c); updateOverfillFlag(state.containers.find(x => x.id === newId));
+      sg.status = 'done';
+      saveState();
+      renderOverview();
+      if (document.getElementById('modalDetail').classList.contains('show')) openContainerDetail(c.id);
+    }
+  } catch (e) {
+    toast('KI-Fehler: ' + e.message, true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Aufteilen vorschlagen'; }
+  }
+}
+
+// ============================================================
 //   KI
 // ============================================================
 
@@ -3696,6 +4153,14 @@ function migrateLocalPhotosToRTDB() {
 
   loadLocalState();
   migrateRooms();
+  // Abwärtskompatibilität: fehlende Felder ergänzen + overfillFlag neu berechnen
+  state.containers.forEach(c => {
+    if (c.capacity === undefined) c.capacity = null;
+    if (c.capacityUnit === undefined) c.capacityUnit = 'items';
+    if (c.fillScore === undefined) c.fillScore = null;
+    updateOverfillFlag(c);
+  });
+  if (!state.suggestions) state.suggestions = [];
   updateApiKeyStatus();
   updateStats();
   renderOverview();
@@ -3703,6 +4168,13 @@ function migrateLocalPhotosToRTDB() {
   const synced = await syncFromFirebase();
   if (synced) {
     migrateRooms();
+    state.containers.forEach(c => {
+      if (c.capacity === undefined) c.capacity = null;
+      if (c.capacityUnit === undefined) c.capacityUnit = 'items';
+      if (c.fillScore === undefined) c.fillScore = null;
+      updateOverfillFlag(c);
+    });
+    if (!state.suggestions) state.suggestions = [];
     updateStats();
     renderOverview();
   }
