@@ -1032,6 +1032,13 @@ nav.tabs button .icon { font-size: 18px; }
 .badge-expiry { display:inline-block; font-size:9px; font-family:'JetBrains Mono',monospace; letter-spacing:0.06em; padding:1px 5px; border-radius:3px; background:rgba(255,90,54,0.18); color:var(--danger); margin-left:6px; }
 .badge-lent { display:inline-block; font-size:9px; font-family:'JetBrains Mono',monospace; letter-spacing:0.06em; padding:1px 5px; border-radius:3px; background:rgba(255,163,25,0.18); color:var(--amber); margin-left:6px; }
 .badge-qty { display:inline-block; font-size:10px; font-weight:700; color:var(--primary); margin-right:3px; font-family:'JetBrains Mono',monospace; }
+.badge-soon { display:inline-block; font-size:9px; font-family:'JetBrains Mono',monospace; letter-spacing:0.06em; padding:1px 5px; border-radius:3px; background:rgba(255,163,25,0.18); color:var(--amber); margin-left:6px; }
+.container-row .row-fill { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0; min-width:72px; }
+.container-row .row-fill-pct { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:0.04em; }
+.container-row .row-fill-bar { width:70px; height:4px; background:var(--surface-3); border-radius:2px; overflow:hidden; }
+.container-row .row-fill-bar-inner { height:100%; border-radius:2px; background:var(--primary); transition:width 0.3s; }
+.container-row .row-fill-bar-inner.watch { background:var(--amber); }
+.container-row .row-fill-bar-inner.over { background:var(--danger); }
 
 /* ── FILL CARD (Überfüllungs-Erkennung) ── */
 .fill-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 12px; }
@@ -1160,11 +1167,11 @@ nav.tabs button .icon { font-size: 18px; }
       <!-- Hex Map -->
       <div class="hex-section-header">
         <div>
-          <div class="hex-section-title">Lagerkarte</div>
-          <div class="hex-section-sub">Drag &amp; Klick zum Öffnen</div>
+          <div class="hex-section-title">Lager-Ansicht</div>
+          <div class="hex-section-sub">Klicke auf eine Zelle, um den Behälter zu öffnen.</div>
         </div>
         <div class="view-toggle">
-          <button class="active" id="toggleKarte" onclick="setViewMode('karte')">Karte</button>
+          <button class="active" id="toggleKarte" onclick="setViewMode('karte')">Waben</button>
           <button id="toggleListe" onclick="setViewMode('liste')">Liste</button>
         </div>
       </div>
@@ -1963,9 +1970,9 @@ async function renderHexGrid() {
       if (idx < containers.length) {
         const cont = containers[idx];
         const itemCount = state.items.filter(i => i.containerId === cont.id && i.status === 'active').length;
-        const isDust = state.items.some(i => i.containerId === cont.id && i.status === 'active' && daysSince(i.lastUsed || i.created) >= 180);
+        const hasExpired = state.items.some(i => i.containerId === cont.id && i.status === 'active' && i.expiresAt && i.expiresAt < Date.now());
         const flag = cont.overfillFlag;
-        const cls = flag === 'over' ? 'warn' : flag === 'watch' ? 'watch-fill' : isDust ? 'warn' : itemCount === 0 ? 'empty' : itemCount < 5 ? 'partial' : 'filled';
+        const cls = (flag === 'over' || hasExpired) ? 'warn' : flag === 'watch' ? 'watch-fill' : itemCount === 0 ? 'empty' : itemCount < 5 ? 'partial' : 'filled';
         const cell = document.createElement('div');
         cell.className = `hex-cell ${cls}`;
         cell.onclick = () => openContainerDetail(cont.id);
@@ -2001,28 +2008,50 @@ async function renderListView() {
   grid.innerHTML = '';
   const roomCont = state.containers.filter(c => c.roomId === currentRoomId);
   document.getElementById('containerCountLabel').textContent = roomCont.length;
+  const now = Date.now();
 
   for (const c of roomCont) {
-    const itemCount = state.items.filter(i => i.containerId === c.id && i.status === 'active').length;
-    const days = daysSince(c.lastAccessed);
-    const isWarn = days !== null && days > 180;
+    const activeItems = state.items.filter(i => i.containerId === c.id && i.status === 'active');
+    const itemCount = activeItems.length;
     const photo = await getPhotoUrl(c);
 
+    // Füllstand-Balken (nur wenn Kapazität gesetzt)
+    let fillHtml = '';
+    if (c.capacity != null && c.capacity > 0) {
+      const pct = Math.round(itemCount / c.capacity * 100);
+      const barCls = c.overfillFlag === 'over' ? 'over' : c.overfillFlag === 'watch' ? 'watch' : '';
+      fillHtml = `<div class="row-fill"><div class="row-fill-pct">${pct}%</div><div class="row-fill-bar"><div class="row-fill-bar-inner ${barCls}" style="width:${Math.min(100, pct)}%"></div></div></div>`;
+    } else {
+      fillHtml = `<div class="row-badge">${itemCount} obj</div>`;
+    }
+
+    // Ablauf- und Verliehen-Badges
+    const expiredItems = activeItems.filter(i => i.expiresAt && i.expiresAt < now);
+    const soonItems = activeItems.filter(i => i.expiresAt && i.expiresAt >= now && i.expiresAt < now + 30 * 86400000);
+    const lentItems = activeItems.filter(i => i.lentTo);
+    let statusBadges = '';
+    if (expiredItems.length) statusBadges += `<span class="badge-expiry">abgelaufen</span>`;
+    if (soonItems.length) {
+      const daysLeft = Math.ceil((Math.min(...soonItems.map(i => i.expiresAt)) - now) / 86400000);
+      statusBadges += `<span class="badge-soon">Ablauf ${daysLeft}T</span>`;
+    }
+    if (lentItems.length) statusBadges += `<span class="badge-lent">verliehen</span>`;
+
+    // Überfüllt-Badge am Namen
     const flag = c.overfillFlag;
-    const flagBadge = flag === 'over' ? `<span style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:0.06em;padding:1px 5px;border-radius:3px;background:rgba(255,90,54,0.18);color:var(--danger);margin-left:5px;">VOLL</span>` : flag === 'watch' ? `<span style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:0.06em;padding:1px 5px;border-radius:3px;background:rgba(255,163,25,0.18);color:var(--amber);margin-left:5px;">~VOLL</span>` : '';
+    const flagBadge = flag === 'over' ? `<span class="badge-expiry" style="background:rgba(255,90,54,0.18)">VOLL</span>` : flag === 'watch' ? `<span class="badge-soon">~VOLL</span>` : '';
+
     const row = document.createElement('div');
     row.className = 'container-row';
     row.onclick = () => openContainerDetail(c.id);
     row.innerHTML = `
-      <div class="row-thumb" ${photo ? `style="background-image:url(${photo})"` : ''}>
-        ${photo ? '' : '⌂'}
-      </div>
+      <div class="row-thumb" ${photo ? `style="background-image:url(${photo})"` : ''}>${photo ? '' : '⌂'}</div>
       <div class="row-code">${c.code}</div>
       <div class="row-body">
         <div class="row-name">${escapeHtml(c.name)}${flagBadge}</div>
-        <div class="row-meta ${isWarn ? 'warn' : ''}">${c.location || 'kein Standort'} · ${formatAge(days)}</div>
+        <div class="row-meta">${itemCount} Objekte · ${c.location || 'kein Standort'}${statusBadges}</div>
       </div>
-      <div class="row-badge">${itemCount} obj</div>
+      ${fillHtml}
     `;
     grid.appendChild(row);
   }
