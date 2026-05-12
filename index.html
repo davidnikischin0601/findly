@@ -650,6 +650,30 @@ button.icon-btn:hover { background: var(--surface-3); color: var(--ink); }
   border-radius: var(--radius-lg);
   box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
 }
+#scanFocusRing {
+  position: absolute; width: 60px; height: 60px;
+  border: 2px solid #63b3ed; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 7;
+  display: none; animation: focusPulse 0.4s ease-out;
+}
+@keyframes focusPulse {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1.4); }
+  to   { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+}
+.scan-ctrl-btn {
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-2);
+  background: var(--surface-2); color: var(--ink); font-size: 16px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+}
+.scan-ctrl-btn.active { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+.scan-zoom-btn {
+  background: none; border: none; color: var(--ink); font-size: 18px;
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 4px;
+}
+.scan-zoom-btn:active { background: var(--surface-3); }
 .scanner-status {
   text-align: center;
   font-family: 'JetBrains Mono', monospace;
@@ -780,6 +804,7 @@ mark { background: var(--primary); color: var(--primary-ink); padding: 0 2px; bo
 .item-dust-btn:active { opacity: 1; transform: scale(0.92); }
 .item-dust-btn.sell { background: rgba(217,119,6,0.15); color: #d97706; }
 .item-dust-btn.trash { background: rgba(255,90,54,0.12); color: var(--danger); }
+.item-dust-btn.move { background: rgba(99,179,237,0.12); color: #63b3ed; }
 
 /* ── DUST CARDS ── */
 .dust-card {
@@ -1284,11 +1309,12 @@ nav.tabs button .icon { font-size: 18px; }
         <div class="view-breadcrumb">findly / scan</div>
         <div class="view-heading">QR-Code Scannen</div>
       </div>
-      <div class="scanner-frame">
+      <div class="scanner-frame" id="scannerFrame">
         <video id="scannerVideo" autoplay playsinline muted></video>
         <canvas id="scannerCanvas"></canvas>
         <div class="scanner-overlay"></div>
         <div id="scanProgressBar"></div>
+        <div id="scanFocusRing"></div>
         <div id="scannerConfirm" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.88); z-index:10; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:24px; text-align:center;">
           <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="none" stroke="#FFD60A" stroke-width="2"/><polyline points="12,21 18,27 28,14" fill="none" stroke="#FFD60A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <div id="scannerConfirmCode" style="font-family:'JetBrains Mono',monospace; color:var(--primary); font-size:15px; letter-spacing:0.12em;"></div>
@@ -1298,6 +1324,16 @@ nav.tabs button .icon { font-size: 18px; }
             <button class="btn" id="scannerConfirmOk" onclick="scannerConfirmGo()" style="font-size:12px; min-width:90px;"></button>
           </div>
         </div>
+      </div>
+      <!-- Scan-Steuerung: Zoom + Taschenlampe -->
+      <div id="scannerControls" style="display:none; justify-content:center; align-items:center; gap:10px; margin-top:10px;">
+        <button class="scan-ctrl-btn" id="torchBtn" onclick="toggleTorch()" title="Taschenlampe">☀</button>
+        <div style="display:flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:20px;padding:4px 10px;">
+          <button class="scan-zoom-btn" onclick="adjustZoom(-0.5)">−</button>
+          <span id="zoomLabel" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--primary);min-width:28px;text-align:center;">1×</span>
+          <button class="scan-zoom-btn" onclick="adjustZoom(+0.5)">+</button>
+        </div>
+        <button class="scan-ctrl-btn" onclick="triggerFocus()" title="Fokus auslösen">◎</button>
       </div>
       <div class="scanner-status" id="scannerStatus">QR-CODE INS BILD HALTEN</div>
       <div style="margin-top:16px;">
@@ -1631,7 +1667,27 @@ nav.tabs button .icon { font-size: 18px; }
     </div>
     <div class="btn-row">
       <button class="btn" onclick="saveItem()">Speichern</button>
+      <button class="btn secondary" id="moveItemBtn" onclick="openMoveItemModal()" style="display:none;">↗ Verschieben</button>
       <button class="btn ghost" id="deleteItemBtn" onclick="deleteItem()" style="display:none;">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: ITEM VERSCHIEBEN ── -->
+<div class="modal-bg" id="modalMoveItem">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Item verschieben</span>
+      <button class="modal-close" onclick="closeModal('modalMoveItem')">×</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">In welchen Behälter soll das Item verschoben werden?</div>
+    <div class="field">
+      <label>Ziel-Behälter</label>
+      <select id="moveItemDestSelect" style="font-size:13px;"></select>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="confirmMoveItem()">Verschieben</button>
+      <button class="btn ghost" onclick="closeModal('modalMoveItem')">Abbrechen</button>
     </div>
   </div>
 </div>
@@ -2746,6 +2802,7 @@ async function renderDetailItems() {
         <div class="sub"><span class="cat-pill">${it.category}</span>${formatAge(daysSince(it.lastUsed || it.created))}</div>
       </div>
       <div class="item-dust-btns">
+        <button class="item-dust-btn move" title="Verschieben" onclick="event.stopPropagation();quickMoveItem('${it.id}')">↗</button>
         <button class="item-dust-btn sell" title="Zum Verkaufen" onclick="event.stopPropagation();quickDustAction('${it.id}','sell')">€</button>
         <button class="item-dust-btn trash" title="Wegwerfen" onclick="event.stopPropagation();quickDustAction('${it.id}','trash')">🗑</button>
       </div>
@@ -2792,6 +2849,7 @@ function openItemModalStandalone() {
   document.getElementById('itemCustomCategoryInput').value = '';
   document.getElementById('itemLentField').style.display = 'none';
   document.getElementById('deleteItemBtn').style.display = 'none';
+  document.getElementById('moveItemBtn').style.display = 'none';
   document.getElementById('aiDetectBtn').style.display = 'none';
   // Populate category select
   const sel = document.getElementById('itemCategoryInput');
@@ -2839,6 +2897,7 @@ function openItemModal(id = null) {
   document.getElementById('itemExpiresInput').value = it && it.expiresAt ? new Date(it.expiresAt).toISOString().slice(0,10) : '';
   document.getElementById('itemCustomCategoryInput').value = '';
   document.getElementById('deleteItemBtn').style.display = it ? 'flex' : 'none';
+  document.getElementById('moveItemBtn').style.display = it ? 'inline-flex' : 'none';
   document.getElementById('aiDetectBtn').style.display = 'none';
 
   // Populate category select with fixed + custom options
@@ -2993,34 +3052,147 @@ async function deleteItem() {
   toast('Item gelöscht');
 }
 
+function quickMoveItem(itemId) {
+  editingItem = itemId;
+  openMoveItemModal();
+}
+
+function openMoveItemModal() {
+  if (!editingItem) return;
+  const it = state.items.find(x => x.id === editingItem);
+  if (!it) return;
+
+  const sel = document.getElementById('moveItemDestSelect');
+  sel.innerHTML = '';
+
+  // Group containers by room
+  const rooms = state.rooms || [];
+  const containers = state.containers.filter(c => c.id !== it.containerId);
+
+  if (containers.length === 0) {
+    toast('Kein anderer Behälter vorhanden', true);
+    return;
+  }
+
+  // Containers with a room
+  rooms.forEach(room => {
+    const roomContainers = containers.filter(c => c.roomId === room.id);
+    if (roomContainers.length === 0) return;
+    const group = document.createElement('optgroup');
+    group.label = room.name;
+    roomContainers.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.code} – ${c.name}`;
+      group.appendChild(opt);
+    });
+    sel.appendChild(group);
+  });
+
+  // Containers without a room
+  const noRoom = containers.filter(c => !c.roomId || !rooms.find(r => r.id === c.roomId));
+  if (noRoom.length > 0) {
+    const group = document.createElement('optgroup');
+    group.label = 'Ohne Raum';
+    noRoom.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.code} – ${c.name}`;
+      group.appendChild(opt);
+    });
+    sel.appendChild(group);
+  }
+
+  document.getElementById('modalMoveItem').classList.add('show');
+}
+
+async function confirmMoveItem() {
+  if (!editingItem) return;
+  const it = state.items.find(x => x.id === editingItem);
+  if (!it) return;
+
+  const destId = document.getElementById('moveItemDestSelect').value;
+  if (!destId) return;
+
+  const destContainer = state.containers.find(c => c.id === destId);
+  if (!destContainer) return;
+
+  const oldContainer = state.containers.find(c => c.id === it.containerId);
+
+  it.containerId = destId;
+  it.roomId = destContainer.roomId || null;
+  it.lastUsed = Date.now();
+
+  if (oldContainer) updateOverfillFlag(oldContainer);
+  updateOverfillFlag(destContainer);
+  saveState();
+
+  closeModal('modalMoveItem');
+  document.getElementById('modalItem').classList.remove('show');
+  toast(`↗ "${it.name}" → ${destContainer.code}`);
+
+  await renderDetailItems();
+  renderDetailFillCard();
+}
+
 // ============================================================
 //   SCANNER
 // ============================================================
 
+let _currentZoom = 1;
+let _torchOn = false;
+let _scanTrack = null;
+let _zoomMin = 1, _zoomMax = 1;
+
 async function startScanner() {
   if (scannerActive) return;
   scannerActive = true;
-  const video = document.getElementById('scannerVideo');
+  _currentZoom = 1;
+  _torchOn = false;
+  _scanTrack = null;
+
+  const video  = document.getElementById('scannerVideo');
   const canvas = document.getElementById('scannerCanvas');
   const status = document.getElementById('scannerStatus');
-
   status.textContent = 'KAMERA WIRD GESTARTET…';
 
+  // Tap-to-focus
+  document.getElementById('scannerFrame').addEventListener('click', _onScannerTap);
+
   try {
+    // Höchste Auflösung für kleine QR-Codes
     try {
       scannerStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 4096 }, height: { ideal: 3072 } }
       });
     } catch {
-      scannerStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      try {
+        scannerStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }
+        });
+      } catch {
+        scannerStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
     }
 
-    // Kontinuierlichen Autofokus aktivieren
+    _scanTrack = scannerStream.getVideoTracks()[0];
+
+    // Fokus + Zoom-Capabilities ermitteln und Steuerung einblenden
     try {
-      const track = scannerStream.getVideoTracks()[0];
-      const caps = track.getCapabilities ? track.getCapabilities() : {};
-      if (caps.focusMode && caps.focusMode.includes('continuous')) {
-        await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+      const caps = _scanTrack.getCapabilities ? _scanTrack.getCapabilities() : {};
+      // Kontinuierlicher Autofokus
+      if (caps.focusMode?.includes('continuous')) {
+        await _scanTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+      }
+      // Zoom-Range speichern
+      if (caps.zoom) {
+        _zoomMin = caps.zoom.min ?? 1;
+        _zoomMax = caps.zoom.max ?? 1;
+      }
+      // Steuerleiste anzeigen wenn Zoom oder Torch vorhanden
+      if (caps.zoom || caps.torch) {
+        document.getElementById('scannerControls').style.display = 'flex';
+        document.getElementById('torchBtn').style.display = caps.torch ? '' : 'none';
       }
     } catch (e) { /* nicht unterstützt */ }
 
@@ -3028,7 +3200,7 @@ async function startScanner() {
     await video.play();
     status.textContent = 'QR-CODE INS BILD HALTEN';
 
-    // Primär: native BarcodeDetector API (Android Chrome – schnell, guter Fokus)
+    // Primär: native BarcodeDetector API (Android Chrome)
     if ('BarcodeDetector' in window) {
       let detector;
       try { detector = new BarcodeDetector({ formats: ['qr_code','code_128','code_39'] }); }
@@ -3048,17 +3220,18 @@ async function startScanner() {
     // Fallback: jsQR (iOS / ältere Browser)
     } else {
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      const MAX_DIM = 800;
       function tick() {
         if (!scannerActive) return;
         if (video.videoWidth > 0) {
-          const scale = Math.min(1, MAX_DIM / Math.max(video.videoWidth, video.videoHeight));
-          canvas.width  = Math.round(video.videoWidth  * scale);
-          canvas.height = Math.round(video.videoHeight * scale);
+          // Volle Auflösung — kein Downscaling damit kleine Codes erkannt werden
+          canvas.width  = video.videoWidth;
+          canvas.height = video.videoHeight;
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           try {
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imgData.data, imgData.width, imgData.height);
+            const code = jsQR(imgData.data, imgData.width, imgData.height, {
+              inversionAttempts: 'dontInvert'
+            });
             if (code && code.data) {
               if (_scanDetected(code.data)) { _scanReset(); handleScan(code.data); return; }
             } else { _scanReset(); }
@@ -3081,9 +3254,88 @@ async function startScanner() {
   }
 }
 
+async function adjustZoom(delta) {
+  if (!_scanTrack) return;
+  const caps = _scanTrack.getCapabilities?.() ?? {};
+  if (!caps.zoom) return;
+  _currentZoom = Math.max(caps.zoom.min, Math.min(caps.zoom.max, _currentZoom + delta));
+  try {
+    await _scanTrack.applyConstraints({ advanced: [{ zoom: _currentZoom }] });
+    document.getElementById('zoomLabel').textContent = _currentZoom.toFixed(1) + '×';
+  } catch(e) { /* ignore */ }
+}
+
+async function toggleTorch() {
+  if (!_scanTrack) return;
+  const caps = _scanTrack.getCapabilities?.() ?? {};
+  if (!caps.torch) return;
+  _torchOn = !_torchOn;
+  try {
+    await _scanTrack.applyConstraints({ advanced: [{ torch: _torchOn }] });
+    document.getElementById('torchBtn').classList.toggle('active', _torchOn);
+  } catch(e) { _torchOn = !_torchOn; }
+}
+
+async function triggerFocus() {
+  if (!_scanTrack) return;
+  try {
+    const caps = _scanTrack.getCapabilities?.() ?? {};
+    if (caps.focusMode?.includes('single-shot')) {
+      await _scanTrack.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] });
+      setTimeout(async () => {
+        try {
+          if (caps.focusMode.includes('continuous'))
+            await _scanTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+        } catch(e) {}
+      }, 800);
+    }
+  } catch(e) { /* ignore */ }
+}
+
+function _onScannerTap(e) {
+  const frame = document.getElementById('scannerFrame');
+  const rect  = frame.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top)  / rect.height;
+
+  // Fokus-Ring anzeigen
+  const ring = document.getElementById('scanFocusRing');
+  ring.style.left = `${x * 100}%`;
+  ring.style.top  = `${y * 100}%`;
+  ring.style.display = 'block';
+  ring.style.animation = 'none';
+  requestAnimationFrame(() => { ring.style.animation = 'focusPulse 0.4s ease-out'; });
+  setTimeout(() => { ring.style.display = 'none'; }, 800);
+
+  // Kamera-Fokuspunkt setzen
+  if (!_scanTrack) return;
+  try {
+    const caps = _scanTrack.getCapabilities?.() ?? {};
+    if (caps.focusMode?.includes('single-shot') && caps.pointsOfInterest) {
+      _scanTrack.applyConstraints({
+        advanced: [{ focusMode: 'single-shot', pointsOfInterest: [{ x, y }] }]
+      }).then(() => {
+        setTimeout(async () => {
+          try {
+            if (caps.focusMode.includes('continuous'))
+              await _scanTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+          } catch(e) {}
+        }, 1000);
+      }).catch(() => {});
+    }
+  } catch(e) { /* ignore */ }
+}
+
 function stopScanner() {
   scannerActive = false;
   _scanReset();
+  _scanTrack = null;
+  _torchOn = false;
+  document.getElementById('scannerControls').style.display = 'none';
+  document.getElementById('torchBtn').classList.remove('active');
+  document.getElementById('zoomLabel').textContent = '1×';
+  document.getElementById('scanFocusRing').style.display = 'none';
+  document.getElementById('scannerFrame').removeEventListener('click', _onScannerTap);
   if (scannerStream) {
     scannerStream.getTracks().forEach(t => t.stop());
     scannerStream = null;
