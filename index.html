@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0A0A0A">
 <title>Findly</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230A0A0A'/><polygon points='74.25,37 85.51,43.5 85.51,56.5 74.25,63 62.99,56.5 62.99,43.5' fill='%232E2E2E'/><polygon points='62.13,57.99 73.39,64.49 73.39,77.49 62.13,83.99 50.87,77.49 50.87,64.49' fill='%232E2E2E'/><polygon points='37.88,57.99 49.14,64.49 49.14,77.49 37.88,83.99 26.62,77.49 26.62,64.49' fill='%232E2E2E'/><polygon points='25.75,37 37.01,43.5 37.01,56.5 25.75,63 14.49,56.5 14.49,43.5' fill='%232E2E2E'/><polygon points='37.88,16.01 49.14,22.51 49.14,35.51 37.88,42.01 26.62,35.51 26.62,22.51' fill='%232E2E2E'/><polygon points='62.13,16.01 73.39,22.51 73.39,35.51 62.13,42.01 50.87,35.51 50.87,22.51' fill='%232E2E2E'/><polygon points='50,37 60.26,43.5 60.26,56.5 50,63 39.74,56.5 39.74,43.5' fill='%23FFD60A'/></svg>">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -1042,6 +1042,11 @@ nav.tabs button .icon { font-size: 18px; }
 
 /* ── FILL CARD (Überfüllungs-Erkennung) ── */
 .fill-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 12px; }
+.fill-manual-btns { display: flex; gap: 4px; margin-top: 4px; }
+.fill-manual-btn { flex: 1; padding: 5px 4px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.08em; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-3); color: var(--muted); cursor: pointer; text-transform: uppercase; }
+.fill-manual-btn.active { background: var(--primary); color: #000; border-color: var(--primary); font-weight: 700; }
+.fill-manual-btn.watch.active { background: var(--amber); color: #000; border-color: var(--amber); font-weight: 700; }
+.fill-manual-btn.over.active { background: var(--danger); color: #fff; border-color: var(--danger); font-weight: 700; }
 .fill-card-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.16em; color: var(--muted-2); text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
 .fill-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
 .fill-row strong { color: var(--ink-2); }
@@ -1084,14 +1089,23 @@ nav.tabs button .icon { font-size: 18px; }
 <!-- ── TOPBAR ── -->
 <header class="topbar">
   <div class="topbar-brand">
-    <svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="20.58,10.5 23.61,12.25 23.61,15.75 20.58,17.5 17.55,15.75 17.55,12.25" fill="#2E2E2E"/>
-      <polygon points="17.29,16.2 20.32,17.95 20.32,21.45 17.29,23.2 14.26,21.45 14.26,17.95" fill="#2E2E2E"/>
-      <polygon points="10.71,16.2 13.74,17.95 13.74,21.45 10.71,23.2 7.68,21.45 7.68,17.95" fill="#2E2E2E"/>
-      <polygon points="7.42,10.5 10.45,12.25 10.45,15.75 7.42,17.5 4.39,15.75 4.39,12.25" fill="#2E2E2E"/>
-      <polygon points="10.71,4.8 13.74,6.55 13.74,10.05 10.71,11.8 7.68,10.05 7.68,6.55" fill="#2E2E2E"/>
-      <polygon points="17.29,4.8 20.32,6.55 20.32,10.05 17.29,11.8 14.26,10.05 14.26,6.55" fill="#2E2E2E"/>
-      <polygon points="14,10.5 17.03,12.25 17.03,15.75 14,17.5 10.97,15.75 10.97,12.25" fill="#FFD60A"/>
+    <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" rx="20" fill="#0A0A0A"/>
+      <rect x="6" y="6" width="88" height="88" rx="14" fill="#FFD60A"/>
+      <polygon points="42,35 36,45.4 24,45.4 18,35 24,24.6 36,24.6" fill="#3D3200"/>
+      <polygon points="42,55.8 36,66.2 24,66.2 18,55.8 24,45.4 36,45.4" fill="#3D3200"/>
+      <polygon points="60,45.4 54,55.8 42,55.8 36,45.4 42,35 54,35" fill="#3D3200"/>
+      <ellipse cx="68" cy="41" rx="9.5" ry="5.5" fill="white" fill-opacity="0.72" transform="rotate(-25,68,41)"/>
+      <ellipse cx="86" cy="41" rx="9.5" ry="5.5" fill="white" fill-opacity="0.72" transform="rotate(25,86,41)"/>
+      <line x1="74" y1="38" x2="69" y2="30" stroke="#1A1000" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="80" y1="38" x2="85" y2="30" stroke="#1A1000" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="69" cy="29" r="2.5" fill="#1A1000"/>
+      <circle cx="85" cy="29" r="2.5" fill="#1A1000"/>
+      <circle cx="77" cy="43" r="5.5" fill="#1A1000"/>
+      <ellipse cx="77" cy="51" rx="5.5" ry="5"   fill="#1A1000"/>
+      <ellipse cx="77" cy="58" rx="6.5" ry="5"   fill="#FFD60A"/>
+      <ellipse cx="77" cy="65" rx="6"   ry="4.5" fill="#1A1000"/>
+      <ellipse cx="77" cy="71" rx="4.5" ry="3.5" fill="#FFD60A"/>
     </svg>
     <div class="topbar-brand-text">
       <div class="topbar-brand-name">Findly</div>
@@ -1437,7 +1451,7 @@ nav.tabs button .icon { font-size: 18px; }
         <button class="btn secondary" onclick="openAnnotationEditor()" style="font-size:10px;padding:4px 10px;height:auto;">⊞ Markieren</button>
       </div>
       <div style="position:relative;border-radius:var(--radius);overflow:hidden;line-height:0;">
-        <div id="detailLocationPhoto" style="width:100%;aspect-ratio:16/9;background:var(--surface-2);background-size:cover;background-position:center;"></div>
+        <img id="detailLocationPhoto" style="width:100%;display:block;" alt="">
         <svg id="detailLocationAnnotation" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
       </div>
     </div>
@@ -1600,14 +1614,6 @@ nav.tabs button .icon { font-size: 18px; }
     </div>
     <div id="compareWrap" class="compare-wrap" style="cursor:ew-resize;"></div>
     <div style="font-size:12px;color:var(--muted);margin-top:10px;text-align:center;line-height:1.5;">Schiebe den Teiler, um Soll- und Ist-Zustand zu vergleichen</div>
-    <div id="compareSpinner" style="display:none;text-align:center;padding:12px;">
-      <span class="spinner"></span>
-      <span style="font-size:12px;color:var(--muted);margin-left:8px;">KI analysiert…</span>
-    </div>
-    <div id="compareFillResult" style="display:none;margin-top:10px;"></div>
-    <div style="margin-top:12px;">
-      <button class="btn secondary full" id="checkFillBtn" onclick="triggerFillCheck()">Füllstand jetzt prüfen (KI)</button>
-    </div>
   </div>
 </div>
 
@@ -2305,7 +2311,7 @@ async function saveContainer() {
     const locKey = locPhotoData ? `cl_${id}` : null;
     if (photoData) await savePhoto(photoKey, photoData);
     if (locPhotoData) await savePhoto(locKey, locPhotoData);
-    const newC = { id, code, name, location, capacity, capacityUnit: _capUnit, photoKey, locationPhotoKey: locKey, fillScore: null, overfillFlag: null, roomId: currentRoomId, created: Date.now(), lastAccessed: Date.now() };
+    const newC = { id, code, name, location, capacity, capacityUnit: _capUnit, photoKey, locationPhotoKey: locKey, overfillFlag: null, manualFillFlag: null, roomId: currentRoomId, created: Date.now(), lastAccessed: Date.now() };
     updateOverfillFlag(newC);
     state.containers.push(newC);
   }
@@ -2357,13 +2363,13 @@ async function openContainerDetail(id) {
 
   const locPhotoWrap = document.getElementById('detailLocationPhotoWrap');
   const locPhotoEl = document.getElementById('detailLocationPhoto');
-  locPhotoEl.style.backgroundImage = '';
+  locPhotoEl.src = '';
   if (c.locationPhotoKey) {
     const locUrl = await loadPhoto(c.locationPhotoKey);
     if (locUrl) {
-      locPhotoEl.style.backgroundImage = `url(${locUrl})`;
+      locPhotoEl.onload = () => renderLocationAnnotation();
+      locPhotoEl.src = locUrl;
       locPhotoWrap.style.display = 'block';
-      renderLocationAnnotation();
     } else { locPhotoWrap.style.display = 'none'; }
   } else { locPhotoWrap.style.display = 'none'; }
 
@@ -2646,10 +2652,6 @@ async function saveItem() {
     closeModal('modalItem');
     await renderDetailItems();
     renderDetailFillCard();
-    // Trigger KI-Foto-Vergleich wenn Soll-Foto vorhanden + neues Item-Foto
-    if (photoData && currentContainer.photoKey) {
-      triggerAutoFillCheck(currentContainer, photoData);
-    }
   }
 }
 
@@ -3304,14 +3306,19 @@ function computeOverfillFlag(container, items) {
     countSignal = ratio > 1.0 ? 'over' : ratio > 0.85 ? 'watch' : 'ok';
   }
 
-  let photoSignal = null;
-  const fs = container.fillScore;
-  if (fs && typeof fs.confidence === 'number' && fs.confidence >= 0.6) {
-    photoSignal = fs.value > 1.15 ? 'over' : fs.value > 1.02 ? 'watch' : 'ok';
-  }
+  const manualSignal = container.manualFillFlag || null;
 
-  if (countSignal === null && photoSignal === null) return null;
-  return worst(countSignal, photoSignal);
+  if (countSignal === null && manualSignal === null) return null;
+  return worst(countSignal, manualSignal);
+}
+
+function setManualFill(flag) {
+  if (!currentContainer) return;
+  currentContainer.manualFillFlag = flag || null;
+  updateOverfillFlag(currentContainer);
+  saveState();
+  renderDetailFillCard();
+  renderContainers();
 }
 
 function updateOverfillFlag(container) {
@@ -3326,58 +3333,6 @@ function updateOverfillFlag(container) {
   }
 }
 
-async function assessOverfill(referenceDataUrl, currentDataUrl) {
-  if (!state.apiKey) return null;
-  try {
-    const toSrc = url => ({ type: 'base64', media_type: 'image/jpeg', data: url.split(',')[1] });
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': state.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 200,
-        system: 'Bewerte, wie viel voller der Behälter im aktuellen Bild gegenüber dem Referenzbild ist. Antworte ausschließlich als JSON ohne Markdown: {"value": <float 0-1.5>, "confidence": <float 0-1>, "note": "<kurze deutsche Begründung>"}. 1.0 = identisch voll. >1.1 = deutlich voller. <0.9 = leerer.',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Referenzbild (Soll-Zustand):' },
-            { type: 'image', source: toSrc(referenceDataUrl) },
-            { type: 'text', text: 'Aktuelles Bild (Ist-Zustand):' },
-            { type: 'image', source: toSrc(currentDataUrl) }
-          ]
-        }]
-      })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    let txt = (data.content[0].text || '').trim().replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(txt);
-    if (typeof parsed.value !== 'number' || typeof parsed.confidence !== 'number') return null;
-    return { value: parsed.value, confidence: parsed.confidence, timestamp: Date.now(), note: parsed.note || '' };
-  } catch (e) {
-    console.warn('assessOverfill:', e);
-    return null;
-  }
-}
-
-async function triggerAutoFillCheck(container, itemPhotoDataUrl) {
-  // Automatischer Check beim Item hinzufügen — nur wenn Soll-Foto vorhanden und API-Key gesetzt
-  if (!state.apiKey || !container.photoKey) return;
-  const refUrl = await loadPhoto(container.photoKey);
-  if (!refUrl) return;
-  const score = await assessOverfill(refUrl, itemPhotoDataUrl);
-  if (!score) return;
-  container.fillScore = score;
-  updateOverfillFlag(container);
-  saveState();
-  renderDetailFillCard();
-  renderSuggestions();
-}
 
 // ============================================================
 //   FILL CARD UI
@@ -3389,37 +3344,28 @@ function renderDetailFillCard() {
   const c = currentContainer;
   const activeItems = state.items.filter(i => i.containerId === c.id && i.status === 'active');
   const flag = c.overfillFlag;
-  const fs = c.fillScore;
   const hasCapacity = c.capacity != null && c.capacity > 0;
-  const hasScore = fs && typeof fs.confidence === 'number' && fs.confidence >= 0.6;
-  const isStale = fs && (Date.now() - fs.timestamp) > 30 * 24 * 60 * 60 * 1000;
 
-  if (!hasCapacity && !hasScore) { wrap.innerHTML = ''; return; }
+  if (!hasCapacity) { wrap.innerHTML = ''; return; }
 
   let html = '<div class="fill-card">';
-  html += '<div class="fill-card-label"><span>Füllstand</span>';
-  if (flag === 'watch' || flag === 'over') {
-    html += `<button class="fill-warning ${flag}" onclick="openCompareModal()" style="border:none;cursor:pointer;padding:3px 8px;font-size:9px;font-family:\'JetBrains Mono\',monospace;letter-spacing:0.08em;">Vergleichen</button>`;
-  }
-  html += '</div>';
+  html += '<div class="fill-card-label"><span>Füllstand</span></div>';
 
-  if (hasCapacity) {
-    const ratio = Math.min(1.2, activeItems.length / c.capacity);
-    const pct = Math.round(ratio * 100);
-    const barClass = ratio > 1 ? 'over' : ratio > 0.85 ? 'watch' : '';
-    const unitLabel = c.capacityUnit === 'volume' ? '%' : ' Items';
-    html += `<div class="fill-row"><span>Stückzahl</span><strong>${activeItems.length} / ${c.capacity}${unitLabel}</strong></div>`;
-    html += `<div class="fill-bar-wrap"><div class="fill-bar-inner ${barClass}" style="width:${Math.min(100, pct)}%"></div></div>`;
-  }
+  const ratio = Math.min(1.2, activeItems.length / c.capacity);
+  const pct = Math.round(ratio * 100);
+  const barClass = ratio > 1 ? 'over' : ratio > 0.85 ? 'watch' : '';
+  const unitLabel = c.capacityUnit === 'volume' ? '%' : ' Items';
+  html += `<div class="fill-row"><span>Stückzahl</span><strong>${activeItems.length} / ${c.capacity}${unitLabel}</strong></div>`;
+  html += `<div class="fill-bar-wrap"><div class="fill-bar-inner ${barClass}" style="width:${Math.min(100, pct)}%"></div></div>`;
 
-  if (hasScore) {
-    const scorePct = Math.round((fs.value - 1) * 100);
-    const scoreText = scorePct > 0 ? `+${scorePct}% voller als Soll` : scorePct < 0 ? `${scorePct}% leerer als Soll` : 'identisch voll';
-    const scoreDate = new Date(fs.timestamp).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
-    html += `<div class="fill-row" style="margin-top:6px;"><span>KI-Foto-Score</span><strong>${scoreText}</strong></div>`;
-    html += `<div style="font-size:10px;color:var(--muted-2);font-family:\'JetBrains Mono\',monospace;margin-top:2px;">${escapeHtml(fs.note)} · ${scoreDate}</div>`;
-    if (isStale) html += `<div class="fill-stale">⚠ Score veraltet — bitte neu prüfen</div>`;
-  }
+  const mf = c.manualFillFlag || null;
+  html += `<div class="fill-row" style="margin-top:8px;"><span>Manuell überschreiben</span></div>`;
+  html += `<div class="fill-manual-btns">`;
+  html += `<button class="fill-manual-btn${!mf ? ' active' : ''}" onclick="setManualFill(null)">Auto</button>`;
+  html += `<button class="fill-manual-btn${mf === 'ok' ? ' active' : ''}" onclick="setManualFill('ok')">Normal</button>`;
+  html += `<button class="fill-manual-btn watch${mf === 'watch' ? ' active' : ''}" onclick="setManualFill('watch')">Fast voll</button>`;
+  html += `<button class="fill-manual-btn over${mf === 'over' ? ' active' : ''}" onclick="setManualFill('over')">Voll</button>`;
+  html += `</div>`;
 
   if (flag === 'watch' || flag === 'over') {
     const flagLabel = flag === 'over' ? '⚠ Behälter überfüllt' : '● Behälter fast voll';
@@ -3434,7 +3380,6 @@ async function openCompareModal() {
   if (!currentContainer) return;
   const wrap = document.getElementById('compareWrap');
   wrap.innerHTML = '<div style="display:grid;place-items:center;height:100%;color:var(--muted-2);font-size:12px;">Fotos werden geladen…</div>';
-  document.getElementById('compareFillResult').style.display = 'none';
   document.getElementById('modalCompare').classList.add('show');
 
   const refUrl = currentContainer.photoKey ? await loadPhoto(currentContainer.photoKey) : null;
@@ -3498,44 +3443,6 @@ function buildCompareSlider(wrap, beforeUrl, afterUrl) {
   }, { passive: true });
 }
 
-async function triggerFillCheck() {
-  if (!currentContainer) return;
-  if (!state.apiKey) { toast('Bitte API-Key in Einstellungen hinterlegen', true); return; }
-  const refUrl = currentContainer.photoKey ? await loadPhoto(currentContainer.photoKey) : null;
-  if (!refUrl) { toast('Kein Soll-Foto vorhanden', true); return; }
-
-  // Ist-Bild: aktuellstes Item-Foto
-  const itemsWithPhoto = state.items
-    .filter(i => i.containerId === currentContainer.id && i.status === 'active' && i.photoKey)
-    .sort((a, b) => (b.lastUsed || b.created) - (a.lastUsed || a.created));
-  if (itemsWithPhoto.length === 0) { toast('Kein Ist-Foto vorhanden — füge ein Item mit Foto hinzu', true); return; }
-  const curUrl = await loadPhoto(itemsWithPhoto[0].photoKey);
-  if (!curUrl) return;
-
-  const btn = document.getElementById('checkFillBtn');
-  const spinner = document.getElementById('compareSpinner');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span><span> Analysiere…</span>';
-  spinner.style.display = 'block';
-
-  const score = await assessOverfill(refUrl, curUrl);
-  btn.disabled = false; btn.textContent = 'Füllstand jetzt prüfen (KI)';
-  spinner.style.display = 'none';
-
-  if (!score) { toast('KI-Bewertung fehlgeschlagen', true); return; }
-
-  currentContainer.fillScore = score;
-  updateOverfillFlag(currentContainer);
-  saveState();
-  renderDetailFillCard();
-  renderSuggestions();
-
-  const resultEl = document.getElementById('compareFillResult');
-  const scorePct = Math.round((score.value - 1) * 100);
-  const scoreText = scorePct > 0 ? `+${scorePct}% voller als Soll` : scorePct < 0 ? `${scorePct}% leerer als Soll` : 'identisch voll';
-  resultEl.innerHTML = `<div class="fill-card" style="margin:0;"><div class="fill-card-label">KI-Ergebnis</div><div class="fill-row"><span>${scoreText}</span><strong>Konfidenz ${Math.round(score.confidence*100)}%</strong></div><div style="font-size:12px;color:var(--muted-2);margin-top:4px;">${escapeHtml(score.note)}</div></div>`;
-  resultEl.style.display = 'block';
-  buildCompareSlider(document.getElementById('compareWrap'), refUrl, curUrl);
-}
 
 // ============================================================
 //   KI-VORSCHLÄGE
@@ -3608,7 +3515,7 @@ async function splitContainerSuggestion(suggestionId) {
     )) {
       const newId = uid();
       const newCode = suggestNextCode();
-      state.containers.push({ id: newId, code: newCode, name: plan.gruppe2.name, location: c.location, capacity: null, capacityUnit: 'items', photoKey: null, locationPhotoKey: null, fillScore: null, overfillFlag: null, roomId: c.roomId || currentRoomId, created: Date.now(), lastAccessed: Date.now() });
+      state.containers.push({ id: newId, code: newCode, name: plan.gruppe2.name, location: c.location, capacity: null, capacityUnit: 'items', photoKey: null, locationPhotoKey: null, overfillFlag: null, manualFillFlag: null, roomId: c.roomId || currentRoomId, created: Date.now(), lastAccessed: Date.now() });
       items.forEach(it => {
         if (plan.gruppe2.items.some(n => it.name.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase().includes(it.name.toLowerCase()))) {
           it.containerId = newId;
@@ -3657,12 +3564,13 @@ async function detectItem() {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 300,
+        max_tokens: 200,
+        system: 'Antworte NUR mit einem einzigen validen JSON-Objekt. Kein Markdown, keine Erklärung, kein Text davor oder danach. Erfinde nichts – beschreibe nur, was im Bild wirklich sichtbar ist.',
         messages: [{
           role: 'user',
           content: [
             { type: 'image', source: imgSource },
-            { type: 'text', text: 'Du bist ein Garagen-Inventar-Helfer. Analysiere das Foto eines Werkzeugs/Garagen-Items. Antworte AUSSCHLIESSLICH als JSON ohne Markdown:\n{"name":"<kurzer präziser deutscher Name, z.B. \'Maulschlüssel 13mm\'>","category":"<eine von: werkzeug, kfz, garten, sport, saison, material, elektro, fluessigkeit, sonstiges>","note":"<kurze Erkennungsnotiz, max. 60 Zeichen>"}' }
+            { type: 'text', text: 'Was ist auf dem Foto zu sehen? Gib den deutschen Namen des sichtbaren Gegenstands an. Wenn unklar, wähle eine ehrliche Beschreibung. Format: {"name":"<präziser deutscher Name des sichtbaren Objekts>","category":"<werkzeug|kfz|garten|sport|saison|material|elektro|fluessigkeit|sonstiges>","note":"<max 40 Zeichen>"}' }
           ]
         }]
       })
@@ -3671,10 +3579,12 @@ async function detectItem() {
     if (data.error) throw new Error(data.error.message);
     let txt = data.content[0].text.trim();
     txt = txt.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(txt);
+    const jsonMatch = txt.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Keine JSON-Antwort erhalten');
+    const parsed = JSON.parse(jsonMatch[0]);
     document.getElementById('itemNameInput').value = parsed.name || '';
     document.getElementById('itemCategoryInput').value = parsed.category || 'sonstiges';
-    document.getElementById('itemNoteInput').value = parsed.note || '';
+    document.getElementById('itemNoteInput').value = (parsed.note || '').slice(0, 40);
     toast('KI: Erkannt');
   } catch (e) {
     toast('KI-Fehler: ' + e.message, true);
@@ -3871,9 +3781,10 @@ let _annotationColor = '#FFD60A';
 let _annotationDragging = false;
 let _annotationStartX = 0;
 let _annotationStartY = 0;
+let _annotationCanvasRect = null; // cached on pointerdown to stay stable during drag
 
 // Global pointer-up to stop drawing even if finger leaves canvas
-function _annotationGlobalUp() { _annotationDragging = false; }
+function _annotationGlobalUp() { _annotationDragging = false; _annotationCanvasRect = null; }
 window.addEventListener('mouseup',  _annotationGlobalUp);
 window.addEventListener('touchend', _annotationGlobalUp);
 
@@ -3971,9 +3882,8 @@ function drawAnnotationCanvas() {
 }
 
 function _annotationEventPos(e) {
-  const canvas = document.getElementById('annotationCanvas');
-  const rect   = canvas.getBoundingClientRect();
-  const src    = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
+  const rect = _annotationCanvasRect || document.getElementById('annotationCanvas').getBoundingClientRect();
+  const src  = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
   return {
     x: Math.max(0, Math.min(1, (src.clientX - rect.left)  / rect.width)),
     y: Math.max(0, Math.min(1, (src.clientY - rect.top)   / rect.height)),
@@ -3983,6 +3893,7 @@ function _annotationEventPos(e) {
 function annotationPointerDown(e) {
   e.preventDefault();
   _syncCanvasSize();
+  _annotationCanvasRect = document.getElementById('annotationCanvas').getBoundingClientRect();
   const pos = _annotationEventPos(e);
   _annotationDragging = true;
   _annotationStartX   = pos.x;
@@ -4011,6 +3922,7 @@ function clearAnnotation() {
 function closeAnnotationModal() {
   document.getElementById('modalAnnotation').classList.remove('show');
   _annotationDragging = false;
+  _annotationCanvasRect = null;
 }
 
 async function saveAnnotation() {
@@ -4184,7 +4096,7 @@ function migrateLocalPhotosToRTDB() {
   state.containers.forEach(c => {
     if (c.capacity === undefined) c.capacity = null;
     if (c.capacityUnit === undefined) c.capacityUnit = 'items';
-    if (c.fillScore === undefined) c.fillScore = null;
+    if (c.manualFillFlag === undefined) c.manualFillFlag = null;
     updateOverfillFlag(c);
   });
   if (!state.suggestions) state.suggestions = [];
@@ -4198,7 +4110,7 @@ function migrateLocalPhotosToRTDB() {
     state.containers.forEach(c => {
       if (c.capacity === undefined) c.capacity = null;
       if (c.capacityUnit === undefined) c.capacityUnit = 'items';
-      if (c.fillScore === undefined) c.fillScore = null;
+      if (c.manualFillFlag === undefined) c.manualFillFlag = null;
       updateOverfillFlag(c);
     });
     if (!state.suggestions) state.suggestions = [];

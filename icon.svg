@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Outer dark background -->
+  <rect width="100" height="100" rx="20" fill="#0A0A0A"/>
+  <!-- Inner yellow area -->
+  <rect x="6" y="6" width="88" height="88" rx="14" fill="#FFD60A"/>
+
+  <!-- Honeycomb cluster: 3 tessellating flat-top hexagons (r=12) -->
+  <!-- H1 center (30,35) -->
+  <polygon points="42,35 36,45.4 24,45.4 18,35 24,24.6 36,24.6" fill="#3D3200"/>
+  <!-- H2 center (30,55.8) — shares edge with H1 -->
+  <polygon points="42,55.8 36,66.2 24,66.2 18,55.8 24,45.4 36,45.4" fill="#3D3200"/>
+  <!-- H3 center (48,45.4) — shares edges with H1 and H2 -->
+  <polygon points="60,45.4 54,55.8 42,55.8 36,45.4 42,35 54,35" fill="#3D3200"/>
+
+  <!-- Bee wings (drawn behind body) -->
+  <ellipse cx="68" cy="41" rx="9.5" ry="5.5" fill="white" fill-opacity="0.72" transform="rotate(-25,68,41)"/>
+  <ellipse cx="86" cy="41" rx="9.5" ry="5.5" fill="white" fill-opacity="0.72" transform="rotate(25,86,41)"/>
+
+  <!-- Bee antennae -->
+  <line x1="74" y1="38" x2="69" y2="30" stroke="#1A1000" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="80" y1="38" x2="85" y2="30" stroke="#1A1000" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="69" cy="29" r="2.5" fill="#1A1000"/>
+  <circle cx="85" cy="29" r="2.5" fill="#1A1000"/>
+
+  <!-- Bee head -->
+  <circle cx="77" cy="43" r="5.5" fill="#1A1000"/>
+
+  <!-- Bee body: stacked segments for stripe effect -->
+  <ellipse cx="77" cy="51" rx="5.5" ry="5"   fill="#1A1000"/>
+  <ellipse cx="77" cy="58" rx="6.5" ry="5"   fill="#FFD60A"/>
+  <ellipse cx="77" cy="65" rx="6"   ry="4.5" fill="#1A1000"/>
+  <ellipse cx="77" cy="71" rx="4.5" ry="3.5" fill="#FFD60A"/>
+</svg>
