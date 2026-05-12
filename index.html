@@ -1028,6 +1028,21 @@ nav.tabs button .icon { font-size: 18px; }
 .annotation-color-btn:active { transform:scale(0.9); }
 .annotation-color-btn.selected { border-color:var(--ink) !important; }
 
+/* ── GRUNDRISS (Floor Plan) ── */
+#fpMap { touch-action:none; user-select:none; -webkit-user-select:none; }
+#fpMap.fp-placing { outline:2px dashed var(--primary); outline-offset:-2px; }
+.fp-pin { position:absolute; transform:translate(-50%,-100%); z-index:10; touch-action:none; user-select:none; -webkit-user-select:none; filter:drop-shadow(0 2px 5px rgba(0,0,0,0.55)); }
+.fp-pin.dragging { z-index:20; opacity:0.85; }
+.fp-pin-chip { display:flex; align-items:center; gap:4px; background:var(--surface); border:1.5px solid var(--border-2); border-radius:4px; padding:3px 5px 3px 7px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:var(--ink); white-space:nowrap; cursor:grab; }
+.fp-pin.dragging .fp-pin-chip { cursor:grabbing; border-color:var(--primary); }
+.fp-pin-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.fp-pin-count { font-size:9px; color:var(--muted); min-width:10px; }
+.fp-pin-remove { background:none; border:none; color:var(--muted-2); cursor:pointer; padding:0 0 0 3px; font-size:13px; line-height:1; opacity:0.55; flex-shrink:0; }
+.fp-pin-remove:hover, .fp-pin-remove:active { color:var(--danger); opacity:1; }
+.fp-pin-stem { width:2px; height:7px; margin:0 auto; border-radius:0 0 2px 2px; }
+.fp-unplaced-item { display:inline-flex; align-items:center; gap:5px; background:var(--surface-2); border:1.5px dashed var(--border-2); border-radius:4px; padding:5px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:var(--muted); cursor:pointer; transition:border-color 0.15s, color 0.15s, background 0.15s; -webkit-tap-highlight-color:transparent; }
+.fp-unplaced-item.selected { border-style:solid; border-color:var(--primary); color:var(--primary); background:rgba(255,214,10,0.07); }
+
 /* ── ITEM BADGES ── */
 .badge-expiry { display:inline-block; font-size:9px; font-family:'JetBrains Mono',monospace; letter-spacing:0.06em; padding:1px 5px; border-radius:3px; background:rgba(255,90,54,0.18); color:var(--danger); margin-left:6px; }
 .badge-lent { display:inline-block; font-size:9px; font-family:'JetBrains Mono',monospace; letter-spacing:0.06em; padding:1px 5px; border-radius:3px; background:rgba(255,163,25,0.18); color:var(--amber); margin-left:6px; }
@@ -1186,6 +1201,7 @@ nav.tabs button .icon { font-size: 18px; }
         </div>
         <div class="view-toggle">
           <button class="active" id="toggleKarte" onclick="setViewMode('karte')">Waben</button>
+          <button id="toggleGrundriss" onclick="setViewMode('grundriss')">Grundriss</button>
           <button id="toggleListe" onclick="setViewMode('liste')">Liste</button>
         </div>
       </div>
@@ -1207,6 +1223,35 @@ nav.tabs button .icon { font-size: 18px; }
           <span id="lastSync" style="font-size:9px;color:var(--muted-2);"></span>
         </div>
         <div id="containerGrid" class="container-list"></div>
+      </div>
+
+      <!-- Grundriss view (hidden by default) -->
+      <div id="floorplanWrap" style="display:none;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <label class="btn secondary" style="cursor:pointer;font-size:11px;height:30px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;">
+            ◈ Hintergrundfoto
+            <input type="file" accept="image/*" id="fpPhotoInput" style="display:none;" onchange="fpUploadPhoto(event)">
+          </label>
+          <button class="btn ghost" id="fpRemovePhotoBtn" onclick="fpRemovePhoto()" style="display:none;font-size:11px;height:30px;">Foto entfernen</button>
+          <div style="flex:1;"></div>
+          <span id="fpHint" style="font-size:11px;color:var(--muted);text-align:right;"></span>
+        </div>
+        <div id="fpMap" style="position:relative;width:100%;aspect-ratio:4/3;background:var(--surface-2);border:1px solid var(--border-2);border-radius:var(--radius);overflow:hidden;cursor:default;"
+             onmousedown="fpMapDown(event)" ontouchstart="fpMapDown(event)">
+          <img id="fpBg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;display:none;" alt="">
+          <svg id="fpGridSvg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 400 300" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <defs><pattern id="fpGP" x="0" y="0" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M25 0L0 0 0 25" fill="none" stroke="rgba(255,255,255,0.045)" stroke-width="0.8"/></pattern></defs>
+            <rect width="100%" height="100%" fill="url(#fpGP)"/>
+          </svg>
+          <div id="fpEmpty" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none;">
+            <div style="font-size:32px;opacity:0.12;">⌂</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted-2);text-align:center;line-height:1.5;">Lade ein Foto deiner Garage hoch<br>und ziehe Behälter auf die Karte</div>
+          </div>
+        </div>
+        <div id="fpUnplacedWrap" style="margin-top:12px;display:none;">
+          <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted-2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Nicht platziert — auswählen, dann auf Karte tippen</div>
+          <div id="fpUnplaced" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+        </div>
       </div>
 
       <!-- KI-Vorschläge -->
@@ -1937,10 +1982,229 @@ function switchTab(tab) {
 function setViewMode(mode) {
   viewMode = mode;
   document.getElementById('toggleKarte').classList.toggle('active', mode === 'karte');
+  document.getElementById('toggleGrundriss').classList.toggle('active', mode === 'grundriss');
   document.getElementById('toggleListe').classList.toggle('active', mode === 'liste');
-  document.getElementById('hexMapWrap').style.display = mode === 'karte' ? 'block' : 'none';
-  document.getElementById('listViewWrap').style.display = mode === 'liste' ? 'block' : 'none';
-  if (mode === 'liste') renderListView();
+  document.getElementById('hexMapWrap').style.display       = mode === 'karte'      ? 'block' : 'none';
+  document.getElementById('floorplanWrap').style.display    = mode === 'grundriss'  ? 'block' : 'none';
+  document.getElementById('listViewWrap').style.display     = mode === 'liste'      ? 'block' : 'none';
+  if (mode === 'liste')     renderListView();
+  if (mode === 'grundriss') renderFloorplan();
+}
+
+// ============================================================
+//   GRUNDRISS (Floor Plan)
+// ============================================================
+
+let fpSelectedCid = null;   // container waiting to be placed
+let fpDragCid     = null;   // container currently being dragged
+let fpDragMoved   = false;
+let fpDragOrigin  = null;   // { x, y } client coords at drag start
+let fpMapRect     = null;   // cached getBoundingClientRect of #fpMap
+
+function _fpPos(clientX, clientY) {
+  const r = fpMapRect || document.getElementById('fpMap').getBoundingClientRect();
+  return {
+    x: Math.max(0.01, Math.min(0.99, (clientX - r.left) / r.width)),
+    y: Math.max(0.01, Math.min(0.99, (clientY - r.top)  / r.height)),
+  };
+}
+
+function _fpDotColor(c) {
+  const n = state.items.filter(i => i.containerId === c.id && i.status === 'active').length;
+  if (c.overfillFlag === 'over')   return 'var(--danger)';
+  if (c.overfillFlag === 'watch')  return 'var(--amber)';
+  return n === 0 ? 'var(--muted-2)' : 'var(--primary)';
+}
+
+function renderFloorplan() {
+  const mapEl = document.getElementById('fpMap');
+  if (!mapEl) return;
+  mapEl.querySelectorAll('.fp-pin').forEach(p => p.remove());
+
+  const room       = state.rooms.find(r => r.id === currentRoomId);
+  const containers = state.containers.filter(c => c.roomId === currentRoomId);
+
+  // Background photo
+  const fpBg   = document.getElementById('fpBg');
+  const fpGrid = document.getElementById('fpGridSvg');
+  const fpEmpt = document.getElementById('fpEmpty');
+  if (room?.floorPhotoKey) {
+    loadPhoto(room.floorPhotoKey).then(url => {
+      if (url) { fpBg.src = url; fpBg.style.display = ''; fpGrid.style.opacity = '0.35'; }
+    });
+    document.getElementById('fpRemovePhotoBtn').style.display = '';
+    if (fpEmpt) fpEmpt.style.display = 'none';
+  } else {
+    fpBg.src = ''; fpBg.style.display = 'none';
+    fpGrid.style.opacity = '1';
+    document.getElementById('fpRemovePhotoBtn').style.display = 'none';
+    if (fpEmpt) fpEmpt.style.display = containers.length ? 'none' : '';
+  }
+
+  const placed   = containers.filter(c => c.floorX != null && c.floorY != null);
+  const unplaced = containers.filter(c => c.floorX == null || c.floorY == null);
+
+  // Render placed pins
+  placed.forEach(c => {
+    const n     = state.items.filter(i => i.containerId === c.id && i.status === 'active').length;
+    const color = _fpDotColor(c);
+    const pin   = document.createElement('div');
+    pin.className  = 'fp-pin';
+    pin.dataset.cid = c.id;
+    pin.style.left  = `${c.floorX * 100}%`;
+    pin.style.top   = `${c.floorY * 100}%`;
+    pin.innerHTML = `
+      <div class="fp-pin-chip">
+        <span class="fp-pin-dot" style="background:${color}"></span>
+        <span>${escapeHtml(c.code)}</span>
+        <span class="fp-pin-count">${n}</span>
+        <button class="fp-pin-remove" title="Von Karte entfernen">×</button>
+      </div>
+      <div class="fp-pin-stem" style="background:${color}"></div>`;
+    pin.querySelector('.fp-pin-remove').addEventListener('click',    e => { e.stopPropagation(); fpUnplace(c.id); });
+    pin.querySelector('.fp-pin-remove').addEventListener('touchend', e => { e.stopPropagation(); e.preventDefault(); fpUnplace(c.id); });
+    pin.addEventListener('mousedown',  e => _fpPinStart(e, c.id));
+    pin.addEventListener('touchstart', e => _fpPinStart(e, c.id), { passive: false });
+    mapEl.appendChild(pin);
+  });
+
+  // Unplaced chips
+  const uDiv = document.getElementById('fpUnplaced');
+  const uWrap = document.getElementById('fpUnplacedWrap');
+  uDiv.innerHTML = '';
+  unplaced.forEach(c => {
+    const chip = document.createElement('div');
+    chip.className  = 'fp-unplaced-item' + (c.id === fpSelectedCid ? ' selected' : '');
+    chip.dataset.cid = c.id;
+    chip.innerHTML  = `<span class="fp-pin-dot" style="background:${_fpDotColor(c)}"></span>${escapeHtml(c.code)}`;
+    chip.addEventListener('click',    () => fpSelectForPlace(c.id === fpSelectedCid ? null : c.id));
+    chip.addEventListener('touchend', e => { e.preventDefault(); fpSelectForPlace(c.id === fpSelectedCid ? null : c.id); });
+    uDiv.appendChild(chip);
+  });
+  uWrap.style.display = unplaced.length ? 'block' : 'none';
+
+  _fpUpdateHint();
+}
+
+function fpSelectForPlace(cid) {
+  fpSelectedCid = cid;
+  document.querySelectorAll('.fp-unplaced-item').forEach(el => el.classList.toggle('selected', el.dataset.cid === cid));
+  const map = document.getElementById('fpMap');
+  if (cid) {
+    map.classList.add('fp-placing');
+    const code = state.containers.find(c => c.id === cid)?.code || '';
+    document.getElementById('fpHint').textContent = `"${code}" ausgewählt — auf Karte tippen`;
+  } else {
+    map.classList.remove('fp-placing');
+    _fpUpdateHint();
+  }
+}
+
+function _fpUpdateHint() {
+  const hint     = document.getElementById('fpHint');
+  if (!hint) return;
+  const all       = state.containers.filter(c => c.roomId === currentRoomId);
+  const unplaced  = all.filter(c => c.floorX == null || c.floorY == null);
+  if (fpSelectedCid)        hint.textContent = '';
+  else if (unplaced.length) hint.textContent = 'Behälter auswählen → auf Karte tippen';
+  else if (all.length)      hint.textContent = 'Pins ziehen zum Verschieben';
+  else                      hint.textContent = '';
+}
+
+function fpMapDown(e) {
+  if (fpDragCid) return;
+  if (!fpSelectedCid) return;
+  e.preventDefault();
+  const src = e.touches ? e.touches[0] : e;
+  const pos = _fpPos(src.clientX, src.clientY);
+  const c = state.containers.find(c => c.id === fpSelectedCid);
+  if (c) { c.floorX = pos.x; c.floorY = pos.y; saveState(); }
+  fpSelectForPlace(null);
+  renderFloorplan();
+}
+
+function _fpPinStart(e, cid) {
+  e.stopPropagation();
+  if (fpSelectedCid) { fpSelectForPlace(null); return; }
+  e.preventDefault();
+  const src = e.touches ? e.touches[0] : e;
+  fpDragCid    = cid;
+  fpDragMoved  = false;
+  fpDragOrigin = { x: src.clientX, y: src.clientY };
+  fpMapRect    = document.getElementById('fpMap').getBoundingClientRect();
+  const pin = document.querySelector(`.fp-pin[data-cid="${cid}"]`);
+  if (pin) pin.classList.add('dragging');
+  window.addEventListener('mousemove',  _fpGlobalMove);
+  window.addEventListener('touchmove',  _fpGlobalMove, { passive: false });
+  window.addEventListener('mouseup',    _fpGlobalUp);
+  window.addEventListener('touchend',   _fpGlobalUp);
+}
+
+function _fpGlobalMove(e) {
+  if (!fpDragCid) return;
+  e.preventDefault();
+  const src = e.touches ? e.touches[0] : e;
+  const dx  = src.clientX - fpDragOrigin.x;
+  const dy  = src.clientY - fpDragOrigin.y;
+  if (!fpDragMoved && Math.sqrt(dx*dx + dy*dy) > 5) fpDragMoved = true;
+  if (!fpDragMoved) return;
+  const pos = _fpPos(src.clientX, src.clientY);
+  const pin = document.querySelector(`.fp-pin[data-cid="${fpDragCid}"]`);
+  if (pin) { pin.style.left = `${pos.x * 100}%`; pin.style.top = `${pos.y * 100}%`; }
+}
+
+function _fpGlobalUp(e) {
+  window.removeEventListener('mousemove',  _fpGlobalMove);
+  window.removeEventListener('touchmove',  _fpGlobalMove);
+  window.removeEventListener('mouseup',    _fpGlobalUp);
+  window.removeEventListener('touchend',   _fpGlobalUp);
+  if (!fpDragCid) return;
+  const pin = document.querySelector(`.fp-pin[data-cid="${fpDragCid}"]`);
+  if (pin) pin.classList.remove('dragging');
+  const src = (e.changedTouches && e.changedTouches[0]) || e;
+  if (fpDragMoved) {
+    const pos = _fpPos(src.clientX, src.clientY);
+    const c = state.containers.find(c => c.id === fpDragCid);
+    if (c) { c.floorX = pos.x; c.floorY = pos.y; saveState(); }
+  } else {
+    openContainerDetail(fpDragCid);
+  }
+  fpDragCid = null; fpDragMoved = false; fpDragOrigin = null; fpMapRect = null;
+}
+
+function fpUnplace(cid) {
+  const c = state.containers.find(c => c.id === cid);
+  if (c) { c.floorX = null; c.floorY = null; saveState(); }
+  renderFloorplan();
+}
+
+async function fpUploadPhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    const room = state.rooms.find(r => r.id === currentRoomId);
+    if (!room) return;
+    const key = `fp_${currentRoomId}`;
+    if (room.floorPhotoKey && room.floorPhotoKey !== key) await deletePhoto(room.floorPhotoKey);
+    room.floorPhotoKey = key;
+    await savePhoto(key, ev.target.result);
+    saveState();
+    renderFloorplan();
+    toast('Grundrissfoto gespeichert');
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+async function fpRemovePhoto() {
+  const room = state.rooms.find(r => r.id === currentRoomId);
+  if (!room?.floorPhotoKey) return;
+  await deletePhoto(room.floorPhotoKey);
+  room.floorPhotoKey = null;
+  saveState();
+  renderFloorplan();
+  toast('Foto entfernt');
 }
 
 // ============================================================
@@ -2188,7 +2452,8 @@ async function renderOverview() {
   else dustPill.style.display = 'none';
 
   await renderHexGrid();
-  if (viewMode === 'liste') await renderListView();
+  if (viewMode === 'liste')     await renderListView();
+  if (viewMode === 'grundriss') renderFloorplan();
   renderSuggestions();
 }
 
