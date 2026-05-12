@@ -1236,12 +1236,14 @@ nav.tabs button .icon { font-size: 18px; }
           <div style="flex:1;"></div>
           <span id="fpHint" style="font-size:11px;color:var(--muted);text-align:right;"></span>
         </div>
-        <div id="fpMap" style="position:relative;width:100%;aspect-ratio:4/3;background:var(--surface-2);border:1px solid var(--border-2);border-radius:var(--radius);overflow:hidden;cursor:default;"
+        <div id="fpMap" style="position:relative;width:100%;aspect-ratio:4/3;background:var(--surface-2);border:2px solid var(--border-2);border-radius:var(--radius);overflow:hidden;cursor:default;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06);"
              onmousedown="fpMapDown(event)" ontouchstart="fpMapDown(event)">
           <img id="fpBg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;display:none;" alt="">
           <svg id="fpGridSvg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 400 300" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
             <defs><pattern id="fpGP" x="0" y="0" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M25 0L0 0 0 25" fill="none" stroke="rgba(255,255,255,0.045)" stroke-width="0.8"/></pattern></defs>
             <rect width="100%" height="100%" fill="url(#fpGP)"/>
+            <!-- Outer border frame -->
+            <rect x="2" y="2" width="396" height="296" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="2" rx="4"/>
           </svg>
           <div id="fpEmpty" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none;">
             <div style="font-size:32px;opacity:0.12;">⌂</div>
@@ -1839,12 +1841,7 @@ async function syncFromFirebase() {
     const data = snapshot.val();
     setSyncStatus(true);
     if (data && (data.containers || data.items)) {
-      const rooms = toArr(data.rooms);
-      if (rooms.length > 0) state.rooms = rooms;
-      state.containers = toArr(data.containers);
-      state.items = toArr(data.items);
-      state.suggestions = toArr(data.suggestions);
-      localStorage.setItem('garage_state', JSON.stringify({ rooms: state.rooms, containers: state.containers, items: state.items, suggestions: state.suggestions }));
+      _applyRemoteData(data);
       return true;
     }
     return false;
@@ -1855,14 +1852,61 @@ async function syncFromFirebase() {
   }
 }
 
+// Unique session ID so the real-time listener can ignore our own writes
+const _MY_DEVICE_ID = (() => {
+  let id = sessionStorage.getItem('_findly_dev');
+  if (!id) { id = Math.random().toString(36).slice(2, 10); sessionStorage.setItem('_findly_dev', id); }
+  return id;
+})();
+
 function saveState() {
   _stateVersion++;
-  const data = { rooms: state.rooms, containers: state.containers, items: state.items, customCategories: state.customCategories, suggestions: state.suggestions };
+  const data = { rooms: state.rooms, containers: state.containers, items: state.items, customCategories: state.customCategories, suggestions: state.suggestions, _dev: _MY_DEVICE_ID };
   localStorage.setItem('garage_state', JSON.stringify(data));
   fbRef.set(data)
     .then(() => setSyncStatus(true))
     .catch(e => { console.warn('Firebase-Sync fehlgeschlagen:', e); setSyncStatus(false); });
   updateStats();
+}
+
+function _applyRemoteData(data) {
+  const toArr = v => !v ? [] : Array.isArray(v) ? v : Object.values(v);
+  const rooms = toArr(data.rooms);
+  if (rooms.length > 0) state.rooms = rooms;
+  state.containers       = toArr(data.containers);
+  state.items            = toArr(data.items);
+  state.suggestions      = toArr(data.suggestions  || []);
+  state.customCategories = toArr(data.customCategories || []);
+  localStorage.setItem('garage_state', JSON.stringify({
+    rooms: state.rooms, containers: state.containers, items: state.items,
+    suggestions: state.suggestions, customCategories: state.customCategories,
+  }));
+  migrateRooms();
+  state.containers.forEach(c => {
+    if (c.capacity       === undefined) c.capacity       = null;
+    if (c.capacityUnit   === undefined) c.capacityUnit   = 'items';
+    if (c.manualFillFlag === undefined) c.manualFillFlag = null;
+    updateOverfillFlag(c);
+  });
+  if (!state.suggestions) state.suggestions = [];
+}
+
+function startRealTimeSync() {
+  // Ignore the first callback (fires immediately with current value = data just loaded)
+  let skipNext = true;
+  setTimeout(() => { skipNext = false; }, 3000);
+
+  fbRef.on('value', (snapshot) => {
+    if (skipNext) return;
+    const data = snapshot.val();
+    if (!data || (!data.containers && !data.items)) { setSyncStatus(true); return; }
+    // Skip writes from this very session
+    if (data._dev && data._dev === _MY_DEVICE_ID) return;
+    _applyRemoteData(data);
+    setSyncStatus(true);
+    updateStats();
+    renderOverview();
+  }, () => setSyncStatus(false));
 }
 
 // ============================================================
@@ -2005,9 +2049,12 @@ let fpMapRect     = null;   // cached getBoundingClientRect of #fpMap
 
 function _fpPos(clientX, clientY) {
   const r = fpMapRect || document.getElementById('fpMap').getBoundingClientRect();
+  // Keep pin chips inside the visible map area (account for chip width ~80px, chip height ~36px)
+  const xPad = Math.max(0.08, 44 / r.width);
+  const yTop = Math.max(0.14, 40 / r.height);
   return {
-    x: Math.max(0.01, Math.min(0.99, (clientX - r.left) / r.width)),
-    y: Math.max(0.01, Math.min(0.99, (clientY - r.top)  / r.height)),
+    x: Math.max(xPad,       Math.min(1 - xPad, (clientX - r.left) / r.width)),
+    y: Math.max(yTop, Math.min(0.95,            (clientY - r.top)  / r.height)),
   };
 }
 
@@ -4370,17 +4417,12 @@ function migrateLocalPhotosToRTDB() {
 
   const synced = await syncFromFirebase();
   if (synced) {
-    migrateRooms();
-    state.containers.forEach(c => {
-      if (c.capacity === undefined) c.capacity = null;
-      if (c.capacityUnit === undefined) c.capacityUnit = 'items';
-      if (c.manualFillFlag === undefined) c.manualFillFlag = null;
-      updateOverfillFlag(c);
-    });
-    if (!state.suggestions) state.suggestions = [];
     updateStats();
     renderOverview();
   }
+
+  // Echtzeit-Listener: Änderungen von anderen Geräten sofort übernehmen
+  startRealTimeSync();
 
   // Stille Migration: lokale Fotos in RTDB hochladen (einmalig, im Hintergrund)
   migrateLocalPhotosToRTDB();
