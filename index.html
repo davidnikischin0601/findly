@@ -3144,6 +3144,45 @@ let _torchOn = false;
 let _scanTrack = null;
 let _zoomMin = 1, _zoomMax = 1;
 
+function _startDetectionLoop() {
+  const video  = document.getElementById('scannerVideo');
+  const canvas = document.getElementById('scannerCanvas');
+
+  if ('BarcodeDetector' in window) {
+    let detector;
+    try { detector = new BarcodeDetector({ formats: ['qr_code','code_128','code_39'] }); }
+    catch(e) { detector = new BarcodeDetector({ formats: ['qr_code'] }); }
+    (async function detectNative() {
+      if (!scannerActive) return;
+      try {
+        const codes = await detector.detect(video);
+        if (codes.length > 0) {
+          if (_scanDetected(codes[0].rawValue)) { _scanReset(); handleScan(codes[0].rawValue); return; }
+        } else { _scanReset(); }
+      } catch (e) { /* ignore */ }
+      requestAnimationFrame(detectNative);
+    })();
+  } else {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    (function tick() {
+      if (!scannerActive) return;
+      if (video.videoWidth > 0) {
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        try {
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
+          if (code && code.data) {
+            if (_scanDetected(code.data)) { _scanReset(); handleScan(code.data); return; }
+          } else { _scanReset(); }
+        } catch (e) { /* ignore */ }
+      }
+      requestAnimationFrame(tick);
+    })();
+  }
+}
+
 async function startScanner() {
   if (scannerActive) return;
   scannerActive = true;
@@ -3199,48 +3238,7 @@ async function startScanner() {
     video.srcObject = scannerStream;
     await video.play();
     status.textContent = 'QR-CODE INS BILD HALTEN';
-
-    // Primär: native BarcodeDetector API (Android Chrome)
-    if ('BarcodeDetector' in window) {
-      let detector;
-      try { detector = new BarcodeDetector({ formats: ['qr_code','code_128','code_39'] }); }
-      catch(e) { detector = new BarcodeDetector({ formats: ['qr_code'] }); }
-      async function detectNative() {
-        if (!scannerActive) return;
-        try {
-          const codes = await detector.detect(video);
-          if (codes.length > 0) {
-            if (_scanDetected(codes[0].rawValue)) { _scanReset(); handleScan(codes[0].rawValue); return; }
-          } else { _scanReset(); }
-        } catch (e) { /* ignore */ }
-        requestAnimationFrame(detectNative);
-      }
-      requestAnimationFrame(detectNative);
-
-    // Fallback: jsQR (iOS / ältere Browser)
-    } else {
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      function tick() {
-        if (!scannerActive) return;
-        if (video.videoWidth > 0) {
-          // Volle Auflösung — kein Downscaling damit kleine Codes erkannt werden
-          canvas.width  = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          try {
-            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imgData.data, imgData.width, imgData.height, {
-              inversionAttempts: 'dontInvert'
-            });
-            if (code && code.data) {
-              if (_scanDetected(code.data)) { _scanReset(); handleScan(code.data); return; }
-            } else { _scanReset(); }
-          } catch (e) { /* ignore */ }
-        }
-        requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-    }
+    _startDetectionLoop();
 
   } catch (err) {
     scannerActive = false;
@@ -3404,41 +3402,10 @@ function scannerResume() {
   _scanReset();
   document.getElementById('scannerConfirm').style.display = 'none';
   scannerActive = true;
+  // Video könnte auf iOS pausiert sein — neu starten
   const video = document.getElementById('scannerVideo');
-  const canvas = document.getElementById('scannerCanvas');
-  if ('BarcodeDetector' in window) {
-    const detector = new BarcodeDetector({ formats: ['qr_code'] });
-    (async function detectNative() {
-      if (!scannerActive) return;
-      try {
-        const codes = await detector.detect(video);
-        if (codes.length > 0) {
-          if (_scanDetected(codes[0].rawValue)) { _scanReset(); handleScan(codes[0].rawValue); return; }
-        } else { _scanReset(); }
-      } catch (e) {}
-      requestAnimationFrame(detectNative);
-    })();
-  } else {
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    const MAX_DIM = 800;
-    (function tick() {
-      if (!scannerActive) return;
-      if (video.videoWidth > 0) {
-        const scale = Math.min(1, MAX_DIM / Math.max(video.videoWidth, video.videoHeight));
-        canvas.width = Math.round(video.videoWidth * scale);
-        canvas.height = Math.round(video.videoHeight * scale);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        try {
-          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imgData.data, imgData.width, imgData.height);
-          if (code && code.data) {
-            if (_scanDetected(code.data)) { _scanReset(); handleScan(code.data); return; }
-          } else { _scanReset(); }
-        } catch (e) {}
-      }
-      requestAnimationFrame(tick);
-    })();
-  }
+  if (video.paused) video.play().catch(() => {});
+  _startDetectionLoop();
 }
 
 // ============================================================
