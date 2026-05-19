@@ -2757,7 +2757,7 @@ async function openContainerDetail(id) {
 
   const qrContainer = document.getElementById('detailQR');
   qrContainer.innerHTML = '';
-  new QRCode(qrContainer, { text: 'GARAGE://' + c.code, width: 148, height: 148, correctLevel: QRCode.CorrectLevel.M });
+  new QRCode(qrContainer, { text: _qrUrl(c.code), width: 148, height: 148, correctLevel: QRCode.CorrectLevel.M });
 
   try {
     const bcSvg = document.getElementById('detailBarcode');
@@ -3359,12 +3359,26 @@ function _scanDetected(raw) {
 }
 function _scanReset() { _scanPendingCode = null; _setScanProgress(0); }
 
+function _qrUrl(code) {
+  const base = location.href.split('?')[0].split('#')[0];
+  return base + '?c=' + encodeURIComponent(code);
+}
+
 function handleScan(data) {
   scannerActive = false; // pause detection loop, keep camera stream alive
   clearInterval(_scanConfirmTimer);
 
   let code = data;
-  if (data.startsWith('GARAGE://')) code = data.substring(9);
+  if (data.startsWith('GARAGE://')) {
+    code = data.substring(9);
+  } else if (data.startsWith('http')) {
+    try {
+      code = new URL(data).searchParams.get('c') || data;
+    } catch(e) {
+      const m = data.match(/[?&]c=([^&]+)/);
+      if (m) code = decodeURIComponent(m[1]);
+    }
+  }
   const c = state.containers.find(x => x.code === code);
 
   document.getElementById('scannerConfirmCode').textContent = code;
@@ -4212,12 +4226,13 @@ function printQRCodes() {
 </head><body>
 <h1>Findly – QR-Codes</h1>
 <div class="grid">`;
+  const _printBase = location.href.split('?')[0].split('#')[0];
   state.containers.forEach((c, i) => {
     html += `<div class="label"><div class="code">${c.code}</div><div class="qr" id="q${i}"></div><div class="name">${escapeHtml(c.name)}</div></div>`;
   });
   html += `</div><script>
   ${JSON.stringify(state.containers.map(c => c.code))}.forEach((code, i) => {
-    new QRCode(document.getElementById('q'+i), { text: 'GARAGE://'+code, width: 130, height: 130, correctLevel: QRCode.CorrectLevel.M });
+    new QRCode(document.getElementById('q'+i), { text: '${_printBase}?c='+encodeURIComponent(code), width: 130, height: 130, correctLevel: QRCode.CorrectLevel.M });
   });
   setTimeout(() => window.print(), 600);
 <\/script></body></html>`;
@@ -4653,6 +4668,25 @@ function migrateLocalPhotosToRTDB() {
   if (synced) {
     updateStats();
     renderOverview();
+  }
+
+  // Deep-Link: ?c=CODE → Behälter direkt öffnen (z.B. via Kamera-Scan von außen)
+  const _dlCode = new URLSearchParams(location.search).get('c');
+  if (_dlCode) {
+    const _dlC = state.containers.find(x => x.code === _dlCode);
+    history.replaceState(null, '', location.pathname);
+    if (_dlC) {
+      switchTab('overview');
+      openContainerDetail(_dlC.id);
+    } else {
+      switchTab('overview');
+      confirmDialog(`Behälter "${_dlCode}" nicht gefunden. Jetzt anlegen?`, 'Anlegen').then(ok => {
+        if (ok) setTimeout(() => {
+          openContainerModal();
+          document.getElementById('containerIdInput').value = _dlCode;
+        }, 200);
+      });
+    }
   }
 
   // Echtzeit-Listener: Änderungen von anderen Geräten sofort übernehmen

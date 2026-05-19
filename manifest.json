@@ -7,6 +7,12 @@
   "orientation": "portrait",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
+  "protocol_handlers": [
+    {
+      "protocol": "web+findly",
+      "url": "./index.html?c=%s"
+    }
+  ],
   "icons": [
     {
       "src": "icon.svg",
